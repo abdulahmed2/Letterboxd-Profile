@@ -21,7 +21,12 @@ def scrape():
             if img and img.has_attr('alt'):
                 print(img['alt'])
             rating = film.find('span', class_='rating')
-            print(rating[-2] + '/10')
+            listOfClass = rating['class']
+            rateNum = str(listOfClass[-1:])
+            if len(str(rateNum)) == 12:
+                print('Rated ' + str(rateNum[-4:-2]) + '/10')
+            elif len(str(rateNum)) == 11:
+                print('Rated ' + str(rateNum[-3:-2]) + '/10')
         x = x+1
 
 if __name__ == '__main__':
