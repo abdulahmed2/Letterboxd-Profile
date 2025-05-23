@@ -39,8 +39,10 @@ def scrape():
             elif len(str(rateNum)) == 11:
                 print('Rated ' + str(rateNum[-3:-2]) + '/10')
                 dictMovie.update({"Rating": int(rateNum[-3:-2])})
-            filmLink = film.find('a', class_='frame')
-            print(filmLink)
+            link_tag = film.find('a', class_='frame')
+            if link_tag and link_tag.has_attr('href'):
+                full_link = 'https://letterboxd.com' + link_tag['href']
+            print(full_link)
         x = x+1
 
 if __name__ == '__main__':
