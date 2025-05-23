@@ -40,8 +40,11 @@ def scrape():
                 print('Rated ' + str(rateNum[-3:-2]) + '/10')
                 dictMovie.update({"Rating": int(rateNum[-3:-2])})
             filmLinkDiv = film.find('div', class_='poster')
-            filmLink = 'letterboxd.com' + filmLinkDiv.get('data-target-link')
-            print(filmLink)
+            url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            releaseYear = soup.find('meta', property='og:title')
+            print(releaseYear)
         x = x+1
 
 if __name__ == '__main__':
