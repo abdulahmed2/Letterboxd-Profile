@@ -41,10 +41,15 @@ def scrape():
                 dictMovie.update({"Rating": int(rateNum[-3:-2])})
             filmLinkDiv = film.find('div', class_='poster')
             url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
-            response = requests.get(url)
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
+            response = requests.get(url, headers=headers)
             soup = BeautifulSoup(response.text, 'html.parser')
-            releaseYear = soup.find('meta', property='og:title')
-            print(releaseYear)
+            metaData = soup.find('meta', property='og:title')
+            releaseYear = metaData['content']
+            dictMovie.update({"Year": releaseYear[-5:-1]})
+            directorPara = soup.find('p', class_='credits')
+            directorNamed = directorPara.text[13:-2]
+            dictMovie.update({"Director": directorNamed})
         x = x+1
 
 if __name__ == '__main__':
