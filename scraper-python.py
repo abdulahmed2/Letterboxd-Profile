@@ -55,16 +55,7 @@ def scrape():
             scripts = soup.find_all('script')
             for script in scripts:
                 if 'window.ramp.custom_tags' in script.text:
-                    match = re.search(r'window\.ramp\.custom_tags\s*=\s*(\[[^\]]*\])', script.text)
-                    if match:
-                        tag_list_str = match.group(1)
-                        try:
-                            tag_list = json.loads(tag_list_str)
-                            if 'drama' in tag_list:
-                                print('Drama genre found!')
-                                print('Tags:', tag_list)
-                        except json.JSONDecodeError:
-                            print("Could not decode the tag list.")
+                    print(script)
         x = x+1
 
 if __name__ == '__main__':
