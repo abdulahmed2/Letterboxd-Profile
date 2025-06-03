@@ -6,32 +6,34 @@ import json
 def scrape():
     print('Enter your Letterboxd username:')
     username = input()
-    url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
 
+    url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    
     num_of_pages = soup.find_all('li', class_="paginate-page")
     x = 1
+
     for i in num_of_pages:
+
         dictMovie = {
         "Name": "FilmName",
         "Year": 0,
         "Rating": 0,
         "Director": "DirectorName",
-        "Genre": "Genre",
-        "Theme1": "Theme1",
-        "Theme2": "Theme2"
+        "Genre": "Genre"
         }
+
         url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         films = soup.find_all('li', class_='poster-container')
+
         for film in films:
             img = film.find('img')
             if img and img.has_attr('alt'):
                 print(img['alt'])
             dictMovie.update({"Name": img['alt']})
+
             rating = film.find('span', class_='rating')
             listOfClass = rating['class']
             rateNum = str(listOfClass[-1:])
@@ -41,21 +43,38 @@ def scrape():
             elif len(str(rateNum)) == 11:
                 print('Rated ' + str(rateNum[-3:-2]) + '/10')
                 dictMovie.update({"Rating": int(rateNum[-3:-2])})
+
             filmLinkDiv = film.find('div', class_='poster')
             url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
             response = requests.get(url, headers=headers)
             soup = BeautifulSoup(response.text, 'html.parser')
             metaData = soup.find('meta', property='og:title')
+
             releaseYear = metaData['content']
             dictMovie.update({"Year": releaseYear[-5:-1]})
+
             directorPara = soup.find('p', class_='credits')
             directorNamed = directorPara.text[13:-2]
-            dictMovie.update({"Director": directorNamed})
+            if ',' in directorNamed:
+                indexOf = directorNamed.find(',')
+                dictMovie.update({"Director": directorNamed[0:indexOf]})
+                print(dictMovie)
+            else:
+                dictMovie.update({"Director": directorNamed})
+                print(dictMovie)
+                
             scripts = soup.find_all('script')
             for script in scripts:
                 if 'window.ramp.custom_tags' in script.text:
-                    print(script)
+                    script_content = script.string
+                    lines = script_content.splitlines()
+                    target_line = None
+                    for line in lines:
+                        if "'," in line:
+                            target_line = line.strip()[1:-2]
+                            dictMovie.update({"Genre": target_line})
+                            break
         x = x+1
 
 if __name__ == '__main__':
