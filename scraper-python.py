@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+from collections import Counter
 
 def scrape():
     print('Enter your Letterboxd username:')
@@ -12,6 +13,8 @@ def scrape():
     soup = BeautifulSoup(response.text, 'html.parser')
     num_of_pages = soup.find_all('li', class_="paginate-page")
     x = 1
+
+    directorList = []
 
     for i in num_of_pages:
 
@@ -59,10 +62,8 @@ def scrape():
             if ',' in directorNamed:
                 indexOf = directorNamed.find(',')
                 dictMovie.update({"Director": directorNamed[0:indexOf]})
-                print(dictMovie)
             else:
                 dictMovie.update({"Director": directorNamed})
-                print(dictMovie)
                 
             scripts = soup.find_all('script')
             for script in scripts:
@@ -75,7 +76,46 @@ def scrape():
                             target_line = line.strip()[1:-2]
                             dictMovie.update({"Genre": target_line})
                             break
+            
+            directorList.append(dictMovie.get('Director'))
+
+            def top_5_most_common(input_list):
+                if not input_list:
+                    return []
+                
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common(5)
+                return most_common_items
+
+            top_items = top_5_most_common(directorList)
+            print(dictMovie)
+            
         x = x+1
+
+    topDirector = top_items[0][0]
+    topDirectorCount = top_items[0][1]
+
+    stopDirector = top_items[1][0]
+    stopDirectorCount = top_items[1][1]
+
+    ttopDirector = top_items[2][0]
+    ttopDirectorCount = top_items[2][1]
+
+    ftopDirector = top_items[3][0]
+    ftopDirectorCount = top_items[3][1]
+
+    fitopDirector = top_items[4][0]
+    fitopDirectorCount = top_items[4][1]
+
+    print("Your top director is: " + topDirector + "; " + str(topDirectorCount) + " movies watched.")
+
+    print("Your second top director is: " + stopDirector + "; " + str(stopDirectorCount) + " movies watched.")
+
+    print("Your third top director is: " + ttopDirector + "; " + str(ttopDirectorCount) + " movies watched.")
+
+    print("Your fourth top director is: " + ftopDirector + "; " + str(ftopDirectorCount) + " movies watched.")
+
+    print("Your fifth top director is: " + fitopDirector + "; " + str(fitopDirectorCount) + " movies watched.")
 
 if __name__ == '__main__':
     scrape()
