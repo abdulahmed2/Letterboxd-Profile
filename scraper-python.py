@@ -15,8 +15,9 @@ def scrape():
     x = 1
 
     directorList = []
-
-    for i in num_of_pages:
+    ratingList = []
+    print(int(num_of_pages[-1].text)) 
+    for i in range(int(num_of_pages[-1].text)):
 
         dictMovie = {
         "Name": "FilmName",
@@ -33,19 +34,22 @@ def scrape():
 
         for film in films:
             img = film.find('img')
-            if img and img.has_attr('alt'):
-                print(img['alt'])
+            print(img['alt'])
             dictMovie.update({"Name": img['alt']})
-
+            
             rating = film.find('span', class_='rating')
-            listOfClass = rating['class']
-            rateNum = str(listOfClass[-1:])
-            if len(str(rateNum)) == 12:
-                print('Rated ' + str(rateNum[-4:-2]) + '/10')
-                dictMovie.update({"Rating": int(rateNum[-4:-2])})
-            elif len(str(rateNum)) == 11:
-                print('Rated ' + str(rateNum[-3:-2]) + '/10')
-                dictMovie.update({"Rating": int(rateNum[-3:-2])})
+            if rating:
+                listOfClass = rating['class']
+                rateNum = str(listOfClass[-1:])
+                if len(str(rateNum)) == 12:
+                    print('Rated ' + str(rateNum[-4:-2]) + '/10')
+                    dictMovie.update({"Rating": int(rateNum[-4:-2])})
+                elif len(str(rateNum)) == 11:
+                    print('Rated ' + str(rateNum[-3:-2]) + '/10')
+                    dictMovie.update({"Rating": int(rateNum[-3:-2])})
+                ratingList.append(dictMovie.get('Rating'))
+            else:  
+                print("Not rated")
 
             filmLinkDiv = film.find('div', class_='poster')
             url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
@@ -58,12 +62,16 @@ def scrape():
             dictMovie.update({"Year": releaseYear[-5:-1]})
 
             directorPara = soup.find('p', class_='credits')
-            directorNamed = directorPara.text[13:-2]
-            if ',' in directorNamed:
-                indexOf = directorNamed.find(',')
-                dictMovie.update({"Director": directorNamed[0:indexOf]})
+            if directorPara:
+                directorNamed = directorPara.text[13:-2]
+                if ',' in directorNamed:
+                    indexOf = directorNamed.find(',')
+                    dictMovie.update({"Director": directorNamed[0:indexOf]})
+                else:
+                    dictMovie.update({"Director": directorNamed})
+                directorList.append(dictMovie.get('Director'))
             else:
-                dictMovie.update({"Director": directorNamed})
+                print("No director")
                 
             scripts = soup.find_all('script')
             for script in scripts:
@@ -77,18 +85,29 @@ def scrape():
                             dictMovie.update({"Genre": target_line})
                             break
             
-            directorList.append(dictMovie.get('Director'))
+            
+            
 
-            def top_5_most_common(input_list):
-                if not input_list:
-                    return []
-                
-                item_counts = Counter(input_list)
-                most_common_items = item_counts.most_common(5)
-                return most_common_items
+        def top_5_most_common(input_list):
+            if not input_list:
+                return []
+            
+            item_counts = Counter(input_list)
+            most_common_items = item_counts.most_common(5)
+            return most_common_items
 
-            top_items = top_5_most_common(directorList)
-            print(dictMovie)
+
+        def top_10_most_common(input_list):
+            if not input_list:
+                return []
+            
+            item_counts = Counter(input_list)
+            most_common_items = item_counts.most_common(10)
+            return most_common_items
+        
+        top_items = top_5_most_common(directorList)
+        commonRating = top_10_most_common(ratingList)
+
             
         x = x+1
 
@@ -116,6 +135,9 @@ def scrape():
     print("Your fourth top director is: " + ftopDirector + "; " + str(ftopDirectorCount) + " movies watched.")
 
     print("Your fifth top director is: " + fitopDirector + "; " + str(fitopDirectorCount) + " movies watched.")
+
+    for i in range(len(commonRating)):
+        print("Your " + str(i + 1) + " most common rating is: " + str(commonRating[i][0]) + " with you rating it " + str(commonRating[i][1]) + " times.") 
 
 if __name__ == '__main__':
     scrape()
