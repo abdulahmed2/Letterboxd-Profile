@@ -16,18 +16,116 @@ def scrape():
 
     directorList = []
     ratingList = []
-    print(int(num_of_pages[-1].text)) 
-    for i in range(int(num_of_pages[-1].text)):
 
+    if num_of_pages:
+        for i in range(int(num_of_pages[-1].text)):
+
+            dictMovie = {
+            "Name": "FilmName",
+            "Year": 0,
+            "Rating": 0,
+            "Director": "DirectorName",
+            "Genre": "Genre"
+            }
+
+            url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            films = soup.find_all('li', class_='poster-container')
+
+            for film in films:
+                img = film.find('img')
+                print(img['alt'])
+                dictMovie.update({"Name": img['alt']})
+                
+                rating = film.find('span', class_='rating')
+                if rating:
+                    listOfClass = rating['class']
+                    rateNum = str(listOfClass[-1:])
+                    if len(str(rateNum)) == 12:
+                        print('Rated ' + str(rateNum[-4:-2]) + '/10')
+                        dictMovie.update({"Rating": int(rateNum[-4:-2])})
+                    elif len(str(rateNum)) == 11:
+                        print('Rated ' + str(rateNum[-3:-2]) + '/10')
+                        dictMovie.update({"Rating": int(rateNum[-3:-2])})
+                    ratingList.append(dictMovie.get('Rating'))
+                else:  
+                    print("Not rated")
+
+                filmLinkDiv = film.find('div', class_='poster')
+                url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
+                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
+                response = requests.get(url, headers=headers)
+                soup = BeautifulSoup(response.text, 'html.parser')
+                metaData = soup.find('meta', property='og:title')
+
+                releaseYear = metaData['content']
+                dictMovie.update({"Year": releaseYear[-5:-1]})
+
+                directorPara = soup.find('p', class_='credits')
+                if directorPara:
+                    directorNamed = directorPara.text[13:-2]
+                    if ',' in directorNamed:
+                        indexOf = directorNamed.find(',')
+                        dictMovie.update({"Director": directorNamed[0:indexOf]})
+                    else:
+                        dictMovie.update({"Director": directorNamed})
+                    directorList.append(dictMovie.get('Director'))
+                else:
+                    print("No director")
+                    
+                scripts = soup.find_all('script')
+                for script in scripts:
+                    if 'window.ramp.custom_tags' in script.text:
+                        script_content = script.string
+                        lines = script_content.splitlines()
+                        target_line = None
+                        for line in lines:
+                            if "'," in line:
+                                target_line = line.strip()[1:-2]
+                                dictMovie.update({"Genre": target_line})
+                                break
+            
+
+
+
+            def top_5_most_common(input_list):
+                if not input_list:
+                    return []
+                
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common(5)
+                return most_common_items
+
+
+            def top_10_most_common(input_list):
+                if not input_list:
+                    return []
+                
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common(10)
+                return most_common_items
+            
+            top_items = top_5_most_common(directorList)
+            commonRating = top_10_most_common(ratingList)
+
+                
+            x = x+1
+
+
+
+
+
+    else:
         dictMovie = {
-        "Name": "FilmName",
-        "Year": 0,
-        "Rating": 0,
-        "Director": "DirectorName",
-        "Genre": "Genre"
-        }
+            "Name": "FilmName",
+            "Year": 0,
+            "Rating": 0,
+            "Director": "DirectorName",
+            "Genre": "Genre"
+            }
 
-        url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
+        url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         films = soup.find_all('li', class_='poster-container')
@@ -85,8 +183,7 @@ def scrape():
                             dictMovie.update({"Genre": target_line})
                             break
             
-            
-            
+
 
         def top_5_most_common(input_list):
             if not input_list:
@@ -107,9 +204,6 @@ def scrape():
         
         top_items = top_5_most_common(directorList)
         commonRating = top_10_most_common(ratingList)
-
-            
-        x = x+1
 
     topDirector = top_items[0][0]
     topDirectorCount = top_items[0][1]
