@@ -13,9 +13,11 @@ def scrape():
     soup = BeautifulSoup(response.text, 'html.parser')
     num_of_pages = soup.find_all('li', class_="paginate-page")
     x = 1
-
+    totalCount = 0
     directorList = []
     ratingList = []
+    genreList = []
+    yearList = []
 
     if num_of_pages:
         for i in range(int(num_of_pages[-1].text)):
@@ -61,6 +63,7 @@ def scrape():
 
                 releaseYear = metaData['content']
                 dictMovie.update({"Year": releaseYear[-5:-1]})
+                yearList.append(dictMovie.get('Year'))
 
                 directorPara = soup.find('p', class_='credits')
                 if directorPara:
@@ -84,6 +87,8 @@ def scrape():
                             if "'," in line:
                                 target_line = line.strip()[1:-2]
                                 dictMovie.update({"Genre": target_line})
+                                genreList.append(dictMovie.get('Genre'))
+                                totalCount = totalCount + 1
                                 break
             
 
@@ -106,8 +111,19 @@ def scrape():
                 most_common_items = item_counts.most_common(10)
                 return most_common_items
             
+            def most_common_genre(input_list):
+                if not input_list:
+                    return []
+                
+
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common()
+                return most_common_items
+            
+            
             top_items = top_5_most_common(directorList)
             commonRating = top_10_most_common(ratingList)
+            commonGenre = most_common_genre(genreList)
 
                 
             x = x+1
@@ -181,17 +197,19 @@ def scrape():
                         if "'," in line:
                             target_line = line.strip()[1:-2]
                             dictMovie.update({"Genre": target_line})
+                            genreList.append(dictMovie.get('Genre'))
+                            totalCount = totalCount + 1
                             break
             
 
 
         def top_5_most_common(input_list):
-            if not input_list:
-                return []
-            
-            item_counts = Counter(input_list)
-            most_common_items = item_counts.most_common(5)
-            return most_common_items
+                if not input_list:
+                    return []
+                
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common(5)
+                return most_common_items
 
 
         def top_10_most_common(input_list):
@@ -202,8 +220,18 @@ def scrape():
             most_common_items = item_counts.most_common(10)
             return most_common_items
         
+        def most_common_genre(input_list):
+            if not input_list:
+                return []
+            
+
+            item_counts = Counter(input_list)
+            most_common_items = item_counts.most_common()
+            return most_common_items
+        
         top_items = top_5_most_common(directorList)
         commonRating = top_10_most_common(ratingList)
+        commonGenre = most_common_genre(genreList)
 
     topDirector = top_items[0][0]
     topDirectorCount = top_items[0][1]
@@ -233,5 +261,11 @@ def scrape():
     for i in range(len(commonRating)):
         print("Your " + str(i + 1) + " most common rating is: " + str(commonRating[i][0]) + " with you rating it " + str(commonRating[i][1]) + " times.") 
 
+    for i in range(5):
+        rawPercent = float(int(commonGenre[i][1])/totalCount) * 100
+        roundedPercent = round(rawPercent, 2)
+        print("Most " + str(i+1) +  " common genre is: " + str(commonGenre[i][0]) + " with you watching it " + str(commonGenre[i][1]) + " times, which is " + str(roundedPercent) + " percent of your total.")
+
+                
 if __name__ == '__main__':
     scrape()
