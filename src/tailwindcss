@@ -1,0 +1,14 @@
+const colors = require('tailwindcss/colors')
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+    content: ["./dist/*.{html,js}"],
+    theme: {
+        extend: {
+            colors: {
+                'orange': hsl(19, 85.00% 44.30)
+            },
+        },
+    },
+    plugins: [],
+}
