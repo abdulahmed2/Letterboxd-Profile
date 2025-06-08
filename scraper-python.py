@@ -18,6 +18,7 @@ def scrape():
     ratingList = []
     genreList = []
     yearList = []
+    filmList = []
 
     if num_of_pages:
         for i in range(int(num_of_pages[-1].text)):
@@ -90,7 +91,9 @@ def scrape():
                                 genreList.append(dictMovie.get('Genre'))
                                 totalCount = totalCount + 1
                                 break
-            
+                
+                toAppend = dictMovie.copy()
+                filmList.append(toAppend)
 
 
 
@@ -120,11 +123,20 @@ def scrape():
                 most_common_items = item_counts.most_common()
                 return most_common_items
             
+            def most_common_year(input_list):
+                if not input_list:
+                    return []
+                
+
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common()
+                return most_common_items
+            
             
             top_items = top_5_most_common(directorList)
             commonRating = top_10_most_common(ratingList)
             commonGenre = most_common_genre(genreList)
-
+            commonYear = most_common_year(yearList)
                 
             x = x+1
 
@@ -174,6 +186,7 @@ def scrape():
 
             releaseYear = metaData['content']
             dictMovie.update({"Year": releaseYear[-5:-1]})
+            yearList.append(dictMovie.get('Year'))
 
             directorPara = soup.find('p', class_='credits')
             if directorPara:
@@ -200,7 +213,9 @@ def scrape():
                             genreList.append(dictMovie.get('Genre'))
                             totalCount = totalCount + 1
                             break
-            
+
+            toAppend = dictMovie.copy()
+            filmList.append(toAppend)
 
 
         def top_5_most_common(input_list):
@@ -248,18 +263,90 @@ def scrape():
     fitopDirector = top_items[4][0]
     fitopDirectorCount = top_items[4][1]
 
-    print("Your top director is: " + topDirector + "; " + str(topDirectorCount) + " movies watched.")
+    totalRatingOne = 0
+    totalRatingTwo = 0
+    totalRatingThre = 0
+    totalRatingFour = 0
+    totalRatingFive = 0
 
-    print("Your second top director is: " + stopDirector + "; " + str(stopDirectorCount) + " movies watched.")
+    for film in filmList:
+        if film.get("Director") == topDirector:
+            totalRatingOne += int(film.get('Rating'))
+        elif film.get("Director") == stopDirector:
+            totalRatingTwo += int(film.get('Rating'))
+        elif film.get("Director") == ttopDirector:
+            totalRatingThre += int(film.get('Rating'))
+        elif film.get("Director") == ftopDirector:
+            totalRatingFour += int(film.get('Rating'))
+        elif film.get('Director') == fitopDirector:
+            totalRatingFive += int(film.get('Rating'))
 
-    print("Your third top director is: " + ttopDirector + "; " + str(ttopDirectorCount) + " movies watched.")
+    decadeList = []
 
-    print("Your fourth top director is: " + ftopDirector + "; " + str(ftopDirectorCount) + " movies watched.")
+    for film in yearList:
+        if  2020 <= int(film) < 2030:
+            decadeList.append("2020s")
+        if 2010 <= int(film) < 2020:
+            decadeList.append("2010s")
+        if 2000 <= int(film) < 2010:
+            decadeList.append("2000s")
+        if 1990 <= int(film) < 2000:
+            decadeList.append("1990s")
+        if 1980 <= int(film) < 1990:
+            decadeList.append("1980s")
+        if 1970 <= int(film) < 1980:
+            decadeList.append("1970s")
+        if 1960 <= int(film) < 1970:
+            decadeList.append("1960s")
+        if 1950 <= int(film) < 1960:
+            decadeList.append("1950s")
+        if 1940 <= int(film) < 1950:
+            decadeList.append("1940s")
+        if 1930 <= int(film) < 1940:
+            decadeList.append("1930s")
+        if 1920 <= int(film) < 1930:
+            decadeList.append("1920s")
+        if 1910 <= int(film) < 1920:
+            decadeList.append("1910s")
+        if 1900 <= int(film) < 1910:
+            decadeList.append("1900s")
+        if 1890 <= int(film) < 1900:
+            decadeList.append("1890s")
+        if 1880 <= int(film) < 1890:
+            decadeList.append("1880ss")
+        if 1870 <= int(film) < 1880:
+            decadeList.append("1870s")
 
-    print("Your fifth top director is: " + fitopDirector + "; " + str(fitopDirectorCount) + " movies watched.")
+    def top_decade(input_list):
+                if not input_list:
+                    return []
+                
+                item_counts = Counter(input_list)
+                most_common_items = item_counts.most_common()
+                return most_common_items
+    
+    topDecade = top_decade(decadeList)
+
+    print("Your top director is: " + topDirector + "; " + str(topDirectorCount) + " movies watched. Avg rating: " + str(float(totalRatingOne/topDirectorCount)))
+
+    print("Your second top director is: " + stopDirector + "; " + str(stopDirectorCount) + " movies watched. Avg rating: " + str(float(totalRatingTwo/stopDirectorCount)))
+
+    print("Your third top director is: " + ttopDirector + "; " + str(ttopDirectorCount) + " movies watched. Avg rating: " + str(float(totalRatingThre/stopDirectorCount)))
+
+    print("Your fourth top director is: " + ftopDirector + "; " + str(ftopDirectorCount) + " movies watched. Avg rating: " + str(float(totalRatingFour/ftopDirectorCount)))
+
+    print("Your fifth top director is: " + fitopDirector + "; " + str(fitopDirectorCount) + " movies watched. Avg rating: " + str(float(totalRatingFive/fitopDirectorCount)))
 
     for i in range(len(commonRating)):
         print("Your " + str(i + 1) + " most common rating is: " + str(commonRating[i][0]) + " with you rating it " + str(commonRating[i][1]) + " times.") 
+
+
+    if len(decadeList) >= 5:
+        for i in range(5):
+            print("Your " + str(i + 1) + " most common decade is: " + str(topDecade[i][0]) + " with you watching it " + str(topDecade[i][1]) + " times.")
+    else:
+        for i in range(len(decadeList)):
+            print("Your " + str(i + 1) + " most common decade is: " + str(topDecade[i][0]) + " with you watching it " + str(topDecade[i][1]) + " times.")
 
     for i in range(5):
         rawPercent = float(int(commonGenre[i][1])/totalCount) * 100
