@@ -2,11 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+import cgi 
 from collections import Counter
 
+
+
 def scrape():
-    print('Enter your Letterboxd username:')
-    username = input()
+    form = cgi.FieldStorage()
+    username = form.getvalue('userInput')
 
     url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
     response = requests.get(url)
