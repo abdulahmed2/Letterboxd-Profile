@@ -1,5 +1,5 @@
-import requests
-from bs4 import BeautifulSoup
+import requests # type: ignore
+from bs4 import BeautifulSoup # type: ignore
 import re
 import json
 from collections import Counter
@@ -313,16 +313,33 @@ def scrape():
         ratingFive = commonRating[4][0]
         ratingFiveCount = commonRating[4][1]  
 
-        for i in range(5):
-            rawPercent = float(int(commonGenre[i][1])/totalCount) * 100
-            roundedPercent = round(rawPercent, 2)
-            print("Most " + str(i+1) +  " common genre is: " + str(commonGenre[i][0]) + " with you watching it " + str(commonGenre[i][1]) + " times, which is " + str(roundedPercent) + " percent of your total.")
+        
+        genreOne = str(commonGenre[0][0]).capitalize()
+        genreOneCount = commonGenre[0][1]
+        roundedPercentOne = round(float(int(commonGenre[0][1])/totalCount) * 100,2)
+        genreTwo = str(commonGenre[1][0]).capitalize()
+        genreTwoCount = commonGenre[1][1]
+        roundedPercentTwo = round(float(int(commonGenre[1][1])/totalCount) * 100,2)
+        genreThree = str(commonGenre[2][0]).capitalize()
+        genreThreeCount = commonGenre[2][1]
+        roundedPercentThree = round(float(int(commonGenre[2][1])/totalCount) * 100,2)
+        genreFour = str(commonGenre[3][0]).capitalize()
+        genreFourCount = commonGenre[3][1]
+        roundedPercentFour = round(float(int(commonGenre[3][1])/totalCount) * 100,2)
+        genreFive = str(commonGenre[4][0]).capitalize()
+        genreFiveCount = commonGenre[4][1]
+        roundedPercentFive = round(float(int(commonGenre[4][1])/totalCount) * 100,2)
+        remainderPer = 100 - roundedPercentOne - roundedPercentTwo - roundedPercentThree - roundedPercentFour - roundedPercentFive
+        
         
 
         return render_template('answer.html', user=username, directorOne = topDirector, directorOneCount =topDirectorCount, directorTwo = stopDirector, directorTwoCount = stopDirectorCount, directorThree = ttopDirector, directorThreeCount = ttopDirectorCount, directorFour = ftopDirector, directorFourCount = ftopDirectorCount, directorFive = fitopDirector, directorFiveCount = fitopDirectorCount,
                                avgOne = avgRatingOne, avgTwo = avgRatingTwo, avgThre = avgRatingThre, avgFour = avgRatingFour, avgFive = avgRatingFive,
                                decOne = decadeOne, decOneCount = decadeOneCount, decTwo = decadeTwo, decTwoCount = decadeTwoCount, decThree = decadeThree, decThreeCount = decadeThreeCount,
-                               rateOne = ratingOne, rateOneCount = ratingOneCount, rateTwo = ratingTwo, rateTwoCount = ratingTwoCount, rateThree = ratingThree, rateThreeCount = ratingThreeCount, rateFour = ratingFour, rateFourCount = ratingFourCount, rateFive = ratingFive, rateFiveCount = ratingFiveCount
+                               rateOne = ratingOne, rateOneCount = ratingOneCount, rateTwo = ratingTwo, rateTwoCount = ratingTwoCount, rateThree = ratingThree, rateThreeCount = ratingThreeCount, rateFour = ratingFour, rateFourCount = ratingFourCount, rateFive = ratingFive, rateFiveCount = ratingFiveCount,
+                               genreOne = genreOne, genreOneCount = genreOneCount, roundedPercentOne = roundedPercentOne, genreTwo = genreTwo, genreTwoCount = genreOneCount, roundedPercentTwo = roundedPercentTwo, genreThree = genreThree, genreThreeCount = genreThreeCount, roundedPercentThree = roundedPercentThree,
+                               genreFour = genreFour, genreFourCount = genreFourCount, roundedPercentFour = roundedPercentFour, genreFive = genreFive, genreFiveCount = genreFiveCount, roundedPercentFive = roundedPercentFive,
+                               remainderPer = remainderPer
                                )
     return render_template('index.html')
 

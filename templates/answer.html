@@ -41,7 +41,7 @@
       Your Top <span class="font-extrabold text-amber-500">3</span> Decades:
     </div>
 
-    <div class="grid grid-cols-4 grid-rows-3 text-center gap-2 mb-12 mt-8">
+    <div class="grid grid-cols-4 grid-rows-3 text-center gap-2 mb-12 mt-8 text-white font-bold">
       <div class="bg-blue-400 col-start-2 col-end-3 border">{{decOne}}</div>
       <div class="bg-blue-400 col-start-3 col-end-4 border">{{decOneCount}} movies from this decade</div>  
       <div class="bg-blue-400 col-start-2 col-end-3 border">{{decTwo}}</div>  
@@ -50,24 +50,148 @@
       <div class="bg-blue-400 col-start-3 col-end-4 border">{{decThreeCount}} movies from this decade</div>           
     </div>
   </div>
-  
-  rateOne rateOneCount
 
-  <div class="bg-gray-700 border">
-    <div class="font-extrabold text-5xl text-center mt-16 text-white">
+  <div class="bg-gray-700 border mb-12">
+    <div class="font-extrabold text-5xl text-center mt-16 text-white mb-12">
       Your Most Common <span class="font-extrabold text-amber-500">Ratings</span>:
     </div>
 
-    <div class="grid grid-cols-4 grid-rows-3 text-center gap-2 mb-12 mt-8">
-      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decOne}}</div>
-      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decOneCount}} movies from this decade</div>  
-      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decTwo}}</div>  
-      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decTwoCount}} movies from this decade</div>  
-      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decThree}}</div>  
-      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decThreeCount}} movies from this decade</div>           
+    <div class="grid grid-rows-5 text-center gap-2 grid-cols-8 mb-8 text-white font-bold">
+      <div class="bg-blue-800 row-start-1 row-end-2 col-start-2 col-end-7">{{rateOne}}/10</div> <div class="row-start-1 row-end-2 col-start-7 col-end-8">{{rateOneCount}} Times rated</div>
+      <div class="bg-blue-800 row-start-2 row-end-3 col-start-2 col-end-6">{{rateTwo}}/10</div> <div class="row-start-2 row-end-3 col-start-7 col-end-8">{{rateTwoCount}} Times rated</div>
+      <div class="bg-blue-800 row-start-3 row-end-4 col-start-2 col-end-5">{{rateThree}}/10</div> <div class="row-start-3 row-end-4 col-start-7 col-end-8">{{rateThreeCount}} Times rated</div>
+      <div class="bg-blue-800 row-start-4 row-end-5 col-start-2 col-end-4 ">{{rateFour}}/10</div> <div class="row-start-4 row-end-5 col-start-7 col-end-8">{{rateFourCount}} Times rated</div>
+      <div class="bg-blue-800 row-start-5 row-end-5 col-start-2 col-end-2">{{rateFive}}/10</div>  <div class="row-start-5 row-end-5 col-start-7 col-end-8">{{rateFiveCount}} Times rated</div>
+    </div>
+
+  </div>
+
+  <div>
+    <div class="font-extrabold text-5xl text-center mt-16 text-white mb-12">
+      Your Most Common <span class="font-extrabold text-amber-500">Genres</span>:
+    </div>
+
+    <div class="text-center mt-16 mb-12 text-white font-bold">
+      {{genreOne}} {{genreOneCount}} {{roundedPercentOne}}%
+    </div>
+    <div class="text-center mt-16 mb-12 text-white font-bold">
+      {{genreTwo}} {{genreTwoCount}} {{roundedPercentTwo}}%
+    </div>
+    <div class="text-center mt-16 mb-12 text-white font-bold">
+      {{genreThree}} {{genreThreeCount}} {{roundedPercentThree}}%
+    </div>
+    <div class="text-center mt-16 mb-12 text-white font-bold">
+      {{genreFour}} {{genreFourCount}} {{roundedPercentFour}}%
+    </div>
+    <div class="text-center mt-16 mb-12 text-white font-bold">
+      {{genreFive}} {{genreFiveCount}} {{roundedPercentFive}}%
+    </div>
+    <div class="text-center mt-16 mb-12 text-white font-bold">
+      Percent of other genres: {{remainderPer}}%
     </div>
   </div>
 
-
 </body>
+
+<script>
+  const options = {
+  series: [
+    {
+      name: "Income",
+      color: "#31C48D",
+      data: ["1420", "1620", "1820", "1420", "1650", "2120"],
+    },
+    {
+      name: "Expense",
+      data: ["788", "810", "866", "788", "1100", "1200"],
+      color: "#F05252",
+    }
+  ],
+  chart: {
+    sparkline: {
+      enabled: false,
+    },
+    type: "bar",
+    width: "100%",
+    height: 400,
+    toolbar: {
+      show: false,
+    }
+  },
+  fill: {
+    opacity: 1,
+  },
+  plotOptions: {
+    bar: {
+      horizontal: true,
+      columnWidth: "100%",
+      borderRadiusApplication: "end",
+      borderRadius: 6,
+      dataLabels: {
+        position: "top",
+      },
+    },
+  },
+  legend: {
+    show: true,
+    position: "bottom",
+  },
+  dataLabels: {
+    enabled: false,
+  },
+  tooltip: {
+    shared: true,
+    intersect: false,
+    formatter: function (value) {
+      return "$" + value
+    }
+  },
+  xaxis: {
+    labels: {
+      show: true,
+      style: {
+        fontFamily: "Inter, sans-serif",
+        cssClass: 'text-xs font-normal fill-gray-500 dark:fill-gray-400'
+      },
+      formatter: function(value) {
+        return "$" + value
+      }
+    },
+    categories: ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    axisTicks: {
+      show: false,
+    },
+    axisBorder: {
+      show: false,
+    },
+  },
+  yaxis: {
+    labels: {
+      show: true,
+      style: {
+        fontFamily: "Inter, sans-serif",
+        cssClass: 'text-xs font-normal fill-gray-500 dark:fill-gray-400'
+      }
+    }
+  },
+  grid: {
+    show: true,
+    strokeDashArray: 4,
+    padding: {
+      left: 2,
+      right: 2,
+      top: -20
+    },
+  },
+  fill: {
+    opacity: 1,
+  }
+}
+
+if(document.getElementById("bar-chart") && typeof ApexCharts !== 'undefined') {
+  const chart = new ApexCharts(document.getElementById("bar-chart"), options);
+  chart.render();
+}
+
+</script>
 </html>
