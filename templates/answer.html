@@ -22,17 +22,52 @@
     </div>
   </div>
 
-  <div class="font-extrabold text-5xl text-center mt-16 text-white">
-    Your Top Directors:
+  <div class="bg-gray-700 border">
+    <div class="font-extrabold text-5xl text-center mt-16 text-white">
+      Your Top <span class="font-extrabold text-amber-500">5</span> Directors:
+    </div>
+
+    <div class="grid grid-cols-7 gap text-center grid-rows-6 text-white font-bold">
+          <div class="bg-amber-500 row-start-6 row-end-1 col-start-2 col-end-3">{{directorOne}} <br> Movies Watched: {{directorOneCount}} <br> Avg Rating: {{avgOne}} </div>
+          <div class="bg-zinc-500 row-start-6 row-end-2 col-start-3 col-end-4">{{directorTwo}} <br> Movies Watched: {{directorTwoCount}} <br> Avg Rating: {{avgTwo}} </div>
+          <div class="bg-yellow-800 row-start-6 row-end-3 col-start-4 col-end-5">{{directorThree}} <br> Movies Watched: {{directorThreeCount}} <br> Avg Rating: {{avgThre}} </div>
+          <div class="bg-yellow-500 row-start-6 row-end-4 col-start-5 col-end-6">{{directorFour}}<br> Movies Watched: {{directorFourCount}} <br> Avg Rating: {{avgFour}} </div>
+          <div class="bg-green-700 row-start-5 row-end-5 col-start-6 col-end-7">{{directorFive}}<br> Movies Watched: {{directorFiveCount}} <br> Avg Rating: {{avgFive}} </div>
+    </div>
   </div>
 
-  <div class="grid grid-cols-7 gap text-center grid-rows-10 mt-12">
-        <div class="bg-amber-500 row-start-10 row-end-1 border-gray-800 col-start-2 col-end-3">{{directorOne}}</div>
-        <div class="bg-zinc-500 row-start-10 row-end-3 border-gray-800 col-start-3 col-end-4">{{directorTwo}}</div>
-        <div class="bg-yellow-800 row-start-10 row-end-5 border-gray-800 col-start-4 col-end-5">{{directorThree}}</div>
-        <div class="bg-yellow-400 row-start-10 row-end-7 border-gray-800 col-start-5 col-end-6">{{directorFour}}</div>
-        <div class="bg-green-600 row-start-9 border-gray-800 col-start-6 col-end-7">{{directorFive}}</div>
+  <div class="bg-gray-700 border">
+    <div class="font-extrabold text-5xl text-center mt-16 text-white">
+      Your Top <span class="font-extrabold text-amber-500">3</span> Decades:
+    </div>
+
+    <div class="grid grid-cols-4 grid-rows-3 text-center gap-2 mb-12 mt-8">
+      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decOne}}</div>
+      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decOneCount}} movies from this decade</div>  
+      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decTwo}}</div>  
+      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decTwoCount}} movies from this decade</div>  
+      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decThree}}</div>  
+      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decThreeCount}} movies from this decade</div>           
+    </div>
   </div>
+  
+  rateOne rateOneCount
+
+  <div class="bg-gray-700 border">
+    <div class="font-extrabold text-5xl text-center mt-16 text-white">
+      Your Most Common <span class="font-extrabold text-amber-500">Ratings</span>:
+    </div>
+
+    <div class="grid grid-cols-4 grid-rows-3 text-center gap-2 mb-12 mt-8">
+      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decOne}}</div>
+      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decOneCount}} movies from this decade</div>  
+      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decTwo}}</div>  
+      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decTwoCount}} movies from this decade</div>  
+      <div class="bg-blue-400 col-start-2 col-end-3 border">{{decThree}}</div>  
+      <div class="bg-blue-400 col-start-3 col-end-4 border">{{decThreeCount}} movies from this decade</div>           
+    </div>
+  </div>
+
 
 </body>
 </html>

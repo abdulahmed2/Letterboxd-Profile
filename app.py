@@ -289,19 +289,29 @@ def scrape():
 
         topDecade = top_decade(decadeList)
 
-        avgRatingOne = float(totalRatingOne/ topDirectorCount)
-        print(avgRatingOne)
+        avgRatingOne = round(float(totalRatingOne/ topDirectorCount), 2)
+        avgRatingTwo = round(float(totalRatingTwo/ stopDirectorCount), 2)
+        avgRatingThre = round(float(totalRatingThre/ ttopDirectorCount), 2)
+        avgRatingFour = round(float(totalRatingFour/ ftopDirectorCount), 2)
+        avgRatingFive = round(float(totalRatingFive/ fitopDirectorCount), 2)
+
+        decadeOne = topDecade[0][0]
+        decadeOneCount = topDecade[0][1]
+        decadeTwo = topDecade[1][0]
+        decadeTwoCount = topDecade[1][1]
+        decadeThree = topDecade[2][0]
+        decadeThreeCount = topDecade[2][1]
         
-        for i in range(len(commonRating)):
-            print("Your " + str(i + 1) + " most common rating is: " + str(commonRating[i][0]) + " with you rating it " + str(commonRating[i][1]) + " times.") 
-
-
-        if len(decadeList) >= 5: 
-            for i in range(5):
-                print("Your " + str(i + 1) + " most common decade is: " + str(topDecade[i][0]) + " with you watching it " + str(topDecade[i][1]) + " times.")
-        else:
-            for i in range(len(decadeList)):
-                print("Your " + str(i + 1) + " most common decade is: " + str(topDecade[i][0]) + " with you watching it " + str(topDecade[i][1]) + " times.")
+        ratingOne = commonRating[0][0]
+        ratingOneCount = commonRating[0][1]
+        ratingTwo = commonRating[1][0]
+        ratingTwoCount = commonRating[1][1] 
+        ratingThree = commonRating[2][0]
+        ratingThreeCount = commonRating[2][1]
+        ratingFour = commonRating[3][0]
+        ratingFourCount = commonRating[3][1] 
+        ratingFive = commonRating[4][0]
+        ratingFiveCount = commonRating[4][1]  
 
         for i in range(5):
             rawPercent = float(int(commonGenre[i][1])/totalCount) * 100
@@ -309,9 +319,10 @@ def scrape():
             print("Most " + str(i+1) +  " common genre is: " + str(commonGenre[i][0]) + " with you watching it " + str(commonGenre[i][1]) + " times, which is " + str(roundedPercent) + " percent of your total.")
         
 
-        return render_template('answer.html', user=username, directorOne = topDirector, directorOneCount =topDirectorCount, directorTwo = stopDirector, directorTwoCount = stopDirectorCount, directorThree = ttopDirector, directorThreeCount = ttopDirectorCount, directorFour = ftopDirector, directorFourCount = ftopDirectorCount, directorFive = fitopDirector, directorFiveCount = fitopDirectorCount
-                               
-                               
+        return render_template('answer.html', user=username, directorOne = topDirector, directorOneCount =topDirectorCount, directorTwo = stopDirector, directorTwoCount = stopDirectorCount, directorThree = ttopDirector, directorThreeCount = ttopDirectorCount, directorFour = ftopDirector, directorFourCount = ftopDirectorCount, directorFive = fitopDirector, directorFiveCount = fitopDirectorCount,
+                               avgOne = avgRatingOne, avgTwo = avgRatingTwo, avgThre = avgRatingThre, avgFour = avgRatingFour, avgFive = avgRatingFive,
+                               decOne = decadeOne, decOneCount = decadeOneCount, decTwo = decadeTwo, decTwoCount = decadeTwoCount, decThree = decadeThree, decThreeCount = decadeThreeCount,
+                               rateOne = ratingOne, rateOneCount = ratingOneCount, rateTwo = ratingTwo, rateTwoCount = ratingTwoCount, rateThree = ratingThree, rateThreeCount = ratingThreeCount, rateFour = ratingFour, rateFourCount = ratingFourCount, rateFive = ratingFive, rateFiveCount = ratingFiveCount
                                )
     return render_template('index.html')
 
