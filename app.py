@@ -122,10 +122,8 @@ def scrape():
                     listOfClass = rating['class']
                     rateNum = str(listOfClass[-1:])
                     if len(str(rateNum)) == 12:
-                        print('Rated ' + str(rateNum[-4:-2]) + '/10')
                         dictMovie.update({"Rating": int(rateNum[-4:-2])})
                     elif len(str(rateNum)) == 11:
-                        print('Rated ' + str(rateNum[-3:-2]) + '/10')
                         dictMovie.update({"Rating": int(rateNum[-3:-2])})
                     ratingList.append(dictMovie.get('Rating'))
                 else:  
@@ -316,20 +314,16 @@ def scrape():
         
         genreOne = str(commonGenre[0][0]).capitalize()
         genreOneCount = commonGenre[0][1]
-        roundedPercentOne = round(float(int(commonGenre[0][1])/totalCount) * 100,2)
         genreTwo = str(commonGenre[1][0]).capitalize()
         genreTwoCount = commonGenre[1][1]
-        roundedPercentTwo = round(float(int(commonGenre[1][1])/totalCount) * 100,2)
         genreThree = str(commonGenre[2][0]).capitalize()
         genreThreeCount = commonGenre[2][1]
-        roundedPercentThree = round(float(int(commonGenre[2][1])/totalCount) * 100,2)
         genreFour = str(commonGenre[3][0]).capitalize()
         genreFourCount = commonGenre[3][1]
-        roundedPercentFour = round(float(int(commonGenre[3][1])/totalCount) * 100,2)
         genreFive = str(commonGenre[4][0]).capitalize()
         genreFiveCount = commonGenre[4][1]
-        roundedPercentFive = round(float(int(commonGenre[4][1])/totalCount) * 100,2)
-        remainderPer = 100 - roundedPercentOne - roundedPercentTwo - roundedPercentThree - roundedPercentFour - roundedPercentFive
+        remainderPer = len(filmList) - genreOneCount - genreTwoCount - genreThreeCount - genreFourCount - genreFiveCount
+        
         
         
 
@@ -337,9 +331,9 @@ def scrape():
                                avgOne = avgRatingOne, avgTwo = avgRatingTwo, avgThre = avgRatingThre, avgFour = avgRatingFour, avgFive = avgRatingFive,
                                decOne = decadeOne, decOneCount = decadeOneCount, decTwo = decadeTwo, decTwoCount = decadeTwoCount, decThree = decadeThree, decThreeCount = decadeThreeCount,
                                rateOne = ratingOne, rateOneCount = ratingOneCount, rateTwo = ratingTwo, rateTwoCount = ratingTwoCount, rateThree = ratingThree, rateThreeCount = ratingThreeCount, rateFour = ratingFour, rateFourCount = ratingFourCount, rateFive = ratingFive, rateFiveCount = ratingFiveCount,
-                               genreOne = genreOne, genreOneCount = genreOneCount, roundedPercentOne = roundedPercentOne, genreTwo = genreTwo, genreTwoCount = genreOneCount, roundedPercentTwo = roundedPercentTwo, genreThree = genreThree, genreThreeCount = genreThreeCount, roundedPercentThree = roundedPercentThree,
-                               genreFour = genreFour, genreFourCount = genreFourCount, roundedPercentFour = roundedPercentFour, genreFive = genreFive, genreFiveCount = genreFiveCount, roundedPercentFive = roundedPercentFive,
-                               remainderPer = remainderPer
+                               genreOne = genreOne, genreOneCount = genreOneCount, genreTwo = genreTwo, genreTwoCount = genreTwoCount, genreThree = genreThree, genreThreeCount = genreThreeCount,
+                               genreFour = genreFour, genreFourCount = genreFourCount, genreFive = genreFive, genreFiveCount = genreFiveCount,
+                               remainderPer = remainderPer,
                                )
     return render_template('index.html')
 
