@@ -216,7 +216,7 @@ def scrape():
         top_items = top_5_most_common(directorList)
         commonRating = top_10_most_common(ratingList)
         commonGenre = most_common_genre(genreList)
-
+        
         topDirector = top_items[0][0]
         topDirectorCount = top_items[0][1]
 
@@ -342,4 +342,4 @@ def scrape():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug = True)
