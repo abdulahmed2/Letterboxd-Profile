@@ -20,14 +20,16 @@ def scrape():
         totalCount = 0
         directorList = []
         ratingList = []
-        genreList = []
+        genreList = []  
         yearList = []
         filmList = []
         decadeList = []
+        
+        
 
         if num_of_pages:
             for i in range(int(num_of_pages[-1].text)):
-
+                
                 dictMovie = {
                 "Name": "FilmName",
                 "Year": 0,
@@ -39,7 +41,8 @@ def scrape():
                 url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
                 response = requests.get(url)
                 soup = BeautifulSoup(response.text, 'html.parser')
-                films = soup.find_all('li', class_='poster-container')
+                films = soup.find_all('li', class_='griditem')
+
 
                 for film in films:
                     img = film.find('img')
@@ -56,18 +59,19 @@ def scrape():
                         ratingList.append(dictMovie.get('Rating'))
                     else:  
                         print("Not rated")
-
+                    
                     filmLinkDiv = film.find('div', class_='poster')
-                    url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
+                    url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-target-link'))
+                    print(url)
                     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
                     response = requests.get(url, headers=headers)
                     soup = BeautifulSoup(response.text, 'html.parser')
                     metaData = soup.find('meta', property='og:title')
-
+                    
                     releaseYear = metaData['content']
                     dictMovie.update({"Year": releaseYear[-5:-1]})
                     yearList.append(dictMovie.get('Year'))
-
+                    
                     directorPara = soup.find('p', class_='credits')
                     if directorPara:
                         directorNamed = directorPara.text[13:-2]
@@ -79,7 +83,7 @@ def scrape():
                         directorList.append(dictMovie.get('Director'))
                     else:
                         print("No director")
-                        
+                    
                     scripts = soup.find_all('script')
                     for script in scripts:
                         if 'window.ramp.custom_tags' in script.text:
