@@ -46,7 +46,6 @@ def scrape():
                 
 
                 for film in films:
-                    print(film)
                     nameFinder = film.find('div')
                     dictMovie.update({"Name": nameFinder['data-item-name']})
 
@@ -60,11 +59,11 @@ def scrape():
                             dictMovie.update({"Rating": int(rateNum[-3:-2])})
                         ratingList.append(dictMovie.get('Rating'))
                     else:  
-                        print("Not rated")
+                        dictMovie.update({"Rating": 0})
+                        ratingList.append(0)
 
                     filmLinkDiv = film.find('div', class_='react-component')
                     url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
-                    print(url)
                     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
                     response = requests.get(url, headers=headers)
                     soup = BeautifulSoup(response.text, 'html.parser')
@@ -114,15 +113,15 @@ def scrape():
                 "Genre": "Genre"
                 }
 
-            url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
             response = requests.get(url)
             soup = BeautifulSoup(response.text, 'html.parser')
-            films = soup.find_all('li', class_='poster-container')
+            films = soup.find_all('li', class_='griditem')
+            
 
             for film in films:
-                img = film.find('img')
-                dictMovie.update({"Name": img['alt']})
-                
+                nameFinder = film.find('div')
+                dictMovie.update({"Name": nameFinder['data-item-name']})
+
                 rating = film.find('span', class_='rating')
                 if rating:
                     listOfClass = rating['class']
@@ -133,19 +132,19 @@ def scrape():
                         dictMovie.update({"Rating": int(rateNum[-3:-2])})
                     ratingList.append(dictMovie.get('Rating'))
                 else:  
-                    print("Not rated")
+                    ratingList.append(0)
 
-                filmLinkDiv = film.find('div', class_='poster')
-                url = 'https://letterboxd.com' + filmLinkDiv.get('data-target-link')
+                filmLinkDiv = film.find('div', class_='react-component')
+                url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
                 response = requests.get(url, headers=headers)
                 soup = BeautifulSoup(response.text, 'html.parser')
                 metaData = soup.find('meta', property='og:title')
-
+                
                 releaseYear = metaData['content']
                 dictMovie.update({"Year": releaseYear[-5:-1]})
                 yearList.append(dictMovie.get('Year'))
-
+                
                 directorPara = soup.find('p', class_='credits')
                 if directorPara:
                     directorNamed = directorPara.text[13:-2]
@@ -157,7 +156,7 @@ def scrape():
                     directorList.append(dictMovie.get('Director'))
                 else:
                     print("No director")
-                    
+                
                 scripts = soup.find_all('script')
                 for script in scripts:
                     if 'window.ramp.custom_tags' in script.text:
@@ -171,7 +170,7 @@ def scrape():
                                 genreList.append(dictMovie.get('Genre'))
                                 totalCount = totalCount + 1
                                 break
-
+                
                 toAppend = dictMovie.copy()
                 filmList.append(toAppend)
 
@@ -244,17 +243,49 @@ def scrape():
         totalRatingFour = 0
         totalRatingFive = 0
 
+        ratedCountOne = 0
+        ratedCountTwo = 0
+        ratedCountThree = 0
+        ratedCountFour = 0
+        ratedCountFive = 0
+        print(filmList)
         for film in filmList:
+            rating = int(film.get("Rating"))
+
             if film.get("Director") == topDirector:
-                totalRatingOne += int(film.get('Rating'))
+                if rating > 0:
+                    totalRatingOne += rating
+                    ratedCountOne += 1
+                else:
+                    ratedCountOne += 0
+
             elif film.get("Director") == stopDirector:
-                totalRatingTwo += int(film.get('Rating'))
+                if rating > 0:
+                    totalRatingTwo += rating
+                    ratedCountTwo += 1
+                else:
+                    ratedCountTwo += 0
+
             elif film.get("Director") == ttopDirector:
-                totalRatingThre += int(film.get('Rating'))
+                if rating > 0:
+                    totalRatingThre += rating
+                    ratedCountThree += 1
+                else:
+                    ratedCountThree += 0
+
             elif film.get("Director") == ftopDirector:
-                totalRatingFour += int(film.get('Rating'))
-            elif film.get('Director') == fitopDirector:
-                totalRatingFive += int(film.get('Rating'))
+                if rating > 0:
+                    totalRatingFour += rating
+                    ratedCountFour += 1
+                else:
+                    ratedCountFour += 0
+
+            elif film.get("Director") == fitopDirector:
+                if rating > 0:
+                    totalRatingFive += rating
+                    ratedCountFive += 1
+                else:
+                    ratedCountFive += 0
 
 
         for film in yearList:
@@ -293,11 +324,16 @@ def scrape():
 
         topDecade = top_decade(decadeList)
 
-        avgRatingOne = round(float(totalRatingOne/ topDirectorCount), 2)
-        avgRatingTwo = round(float(totalRatingTwo/ stopDirectorCount), 2)
-        avgRatingThre = round(float(totalRatingThre/ ttopDirectorCount), 2)
-        avgRatingFour = round(float(totalRatingFour/ ftopDirectorCount), 2)
-        avgRatingFive = round(float(totalRatingFive/ fitopDirectorCount), 2)
+        avgRatingOne = round(totalRatingOne / ratedCountOne, 2) if ratedCountOne > 0 else 0
+        avgRatingTwo = round(totalRatingTwo / ratedCountTwo, 2) if ratedCountTwo > 0 else 0
+        avgRatingThre = round(totalRatingThre / ratedCountThree, 2) if ratedCountThree > 0 else 0
+        avgRatingFour = round(totalRatingFour / ratedCountFour, 2) if ratedCountFour > 0 else 0
+        avgRatingFive = round(totalRatingFive / ratedCountFive, 2) if ratedCountFive > 0 else 0
+        print("films top director 1:" + str(ratedCountOne) + "totalRating" + str(totalRatingOne))
+        print("films top director 2:" + str(ratedCountTwo) + "totalRating" + str(totalRatingTwo))
+        print("films top director 3:" + str(ratedCountThree) + "totalRating" + str(totalRatingThre))
+        print("films top director 4:" + str(ratedCountFour) + "totalRating" + str(totalRatingFour))
+        print("films top director 5:" + str(ratedCountFive) + "totalRating" + str(totalRatingFive))
 
         decadeOne = topDecade[0][0]
         decadeOneCount = topDecade[0][1]
