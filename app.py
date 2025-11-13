@@ -16,6 +16,7 @@ def scrape():
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         num_of_pages = soup.find_all('li', class_="paginate-page")
+
         x = 1
         totalCount = 0
         directorList = []
@@ -42,12 +43,13 @@ def scrape():
                 response = requests.get(url)
                 soup = BeautifulSoup(response.text, 'html.parser')
                 films = soup.find_all('li', class_='griditem')
-
+                
 
                 for film in films:
-                    img = film.find('img')
-                    dictMovie.update({"Name": img['alt']})
-                    
+                    print(film)
+                    nameFinder = film.find('div')
+                    dictMovie.update({"Name": nameFinder['data-item-name']})
+
                     rating = film.find('span', class_='rating')
                     if rating:
                         listOfClass = rating['class']
@@ -59,10 +61,10 @@ def scrape():
                         ratingList.append(dictMovie.get('Rating'))
                     else:  
                         print("Not rated")
-                    
-                    filmLinkDiv = film.find('div', class_='poster')
-                    url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-target-link'))
-                    
+
+                    filmLinkDiv = film.find('div', class_='react-component')
+                    url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
+                    print(url)
                     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101     Firefox/108.0"}
                     response = requests.get(url, headers=headers)
                     soup = BeautifulSoup(response.text, 'html.parser')
