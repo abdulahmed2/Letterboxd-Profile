@@ -4,6 +4,8 @@ import re
 import json
 from collections import Counter
 from flask import Flask, render_template, request, redirect, url_for
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 app = Flask(__name__)
 
@@ -248,7 +250,6 @@ def scrape():
         ratedCountThree = 0
         ratedCountFour = 0
         ratedCountFive = 0
-        print(filmList)
         for film in filmList:
             rating = int(film.get("Rating"))
 
@@ -329,12 +330,7 @@ def scrape():
         avgRatingThre = round(totalRatingThre / ratedCountThree, 2) if ratedCountThree > 0 else 0
         avgRatingFour = round(totalRatingFour / ratedCountFour, 2) if ratedCountFour > 0 else 0
         avgRatingFive = round(totalRatingFive / ratedCountFive, 2) if ratedCountFive > 0 else 0
-        print("films top director 1:" + str(ratedCountOne) + "totalRating" + str(totalRatingOne))
-        print("films top director 2:" + str(ratedCountTwo) + "totalRating" + str(totalRatingTwo))
-        print("films top director 3:" + str(ratedCountThree) + "totalRating" + str(totalRatingThre))
-        print("films top director 4:" + str(ratedCountFour) + "totalRating" + str(totalRatingFour))
-        print("films top director 5:" + str(ratedCountFive) + "totalRating" + str(totalRatingFive))
-
+       
         decadeOne = topDecade[0][0]
         decadeOneCount = topDecade[0][1]
         decadeTwo = topDecade[1][0]
