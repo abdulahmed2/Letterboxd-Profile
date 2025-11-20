@@ -5,6 +5,7 @@ import json
 from collections import Counter
 from flask import Flask, render_template, request, redirect, url_for
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -79,7 +80,7 @@ def process_film(film):
 def scrape():
     if request.method == 'POST':
         username = request.form.get('userInput')
-
+        print("Username submitted: " + str(datetime.now()))
         url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -105,7 +106,7 @@ def scrape():
                 films = soup.find_all('li', class_='griditem')
 
                 # ---- THREADPOOL HERE ----
-                with ThreadPoolExecutor(max_workers=20) as executor:
+                with ThreadPoolExecutor(max_workers=12) as executor:
                     futures = [executor.submit(process_film, film) for film in films]
 
                     for future in as_completed(futures):
@@ -124,7 +125,7 @@ def scrape():
             soup = BeautifulSoup(response.text, 'html.parser')
             films = soup.find_all('li', class_='griditem')
 
-            with ThreadPoolExecutor(max_workers=10) as executor:
+            with ThreadPoolExecutor(max_workers=20) as executor:
                 futures = [executor.submit(process_film, film) for film in films]
 
                 for future in as_completed(futures):
@@ -266,7 +267,7 @@ def scrape():
         remainderPer = len(filmList) - (
             genreOneCount + genreTwoCount + genreThreeCount + genreFourCount + genreFiveCount
         )
-
+        print("Results returned: " + str(datetime.now()))
         return render_template(
             'answer.html',
             user=username,
@@ -313,6 +314,7 @@ def scrape():
             genreFiveCount=genreFiveCount,
             remainderPer=remainderPer,
         )
+
 
     return render_template('index.html')
 
