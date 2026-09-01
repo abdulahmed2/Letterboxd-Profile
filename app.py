@@ -6,6 +6,7 @@ from collections import Counter
 from flask import Flask, render_template, request, redirect, url_for
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+import cloudscraper
 
 app = Flask(__name__)
 
@@ -80,9 +81,16 @@ def process_film(film):
 def scrape():
     if request.method == 'POST':
         username = request.form.get('userInput')
-        print("Username submitted: " + str(datetime.now()))
         url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
-        response = requests.get(url)
+        
+        # Create a Cloudflare-bypassing scraper session
+        scraper = cloudscraper.create_scraper(browser={
+            'browser': 'chrome',
+            'platform': 'windows',
+            'desktop': True
+        })
+        
+        response = scraper.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         num_of_pages = soup.find_all('li', class_="paginate-page")
 
@@ -101,9 +109,18 @@ def scrape():
         if num_of_pages:
             for i in range(int(num_of_pages[-1].text)):
                 page_url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
-                response = requests.get(page_url)
+
+                # Create a Cloudflare-bypassing scraper session
+                scraper = cloudscraper.create_scraper(browser={
+                    'browser': 'chrome',
+                    'platform': 'windows',
+                    'desktop': True
+                })
+                
+                response = scraper.get(page_url)
                 soup = BeautifulSoup(response.text, 'html.parser')
                 films = soup.find_all('li', class_='griditem')
+
 
                 # ---- THREADPOOL HERE ----
                 with ThreadPoolExecutor(max_workers=12) as executor:

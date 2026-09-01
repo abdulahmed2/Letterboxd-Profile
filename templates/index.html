@@ -23,6 +23,7 @@
   </div>
 
   <form class="max-w-md mx-auto" method="POST">
+    {% if error %}<p class="mb-4 text-center text-red-400">{{error}}</p>{% endif %}
     <div class="mb-5 pt-48">
       <label class="block mb-2 text-lg font-medium text-blue-600 font-bold">Letterboxd Username</label>
       <input type="text" name="userInput" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "placeholder="Username" required />
