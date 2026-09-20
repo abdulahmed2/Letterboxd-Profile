@@ -1,110 +1,171 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{user}}</title>
-    <link rel="stylesheet" href="input.css" />
+    <title>{{user}}'s Stats</title>
     <link rel="icon" type="image/x-icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH45TgrphrMnMTlMx9wpG_Jj7JoBzrI9zAfg&s">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .lb-card { background-color: #2C3440; border: 1px solid #445566; transition: transform 0.2s; }
+        .lb-card:hover { transform: translateY(-5px); }
+    </style>
 </head>
 
-<body class="bg-gray-700">
+<body class="bg-[#14181C] text-white min-h-screen pb-20">
 
-  <div class=" flex items-center bg-gray-800 shadow-2xl">
-    <div class="px-4 mx-auto mt-16 mb-16 max-w-7xl sm:mt-24">
-      <div class="text-center">
-        <h1 class="text-4xl font-extrabold tracking-tight text-gray-200 sm:text-5xl md:text-6xl font-title">
-        <span class="block">{{user}}'s <span class="text-orange-400">Pro</span><span class="text-green-500">fi</span><span class="text-blue-400">le</span></span>
-        </h1>
+  <!-- Header -->
+  <div class="bg-[#2C3440] border-b border-[#445566] py-12 mb-12 shadow-lg">
+    <div class="max-w-6xl mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight">
+        {{user}}'s <span class="text-[#FF8000]">Pro</span><span class="text-[#00E054]">fi</span><span class="text-[#40BCF4]">le</span>
+      </h1>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 space-y-16">
+
+    <!-- Directors Section -->
+    <section>
+      <h2 class="text-2xl font-bold text-[#8AA8CC] uppercase tracking-widest mb-6 border-b border-[#445566] pb-2">Top 5 Directors</h2>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="lb-card rounded-lg p-6 text-center border-t-4 border-t-[#FF8000]">
+          <h3 class="font-bold text-xl mb-3 text-white truncate" title="{{directorOne}}">{{directorOne}}</h3>
+          <div class="flex justify-between text-sm text-[#8AA8CC] bg-[#14181C] p-2 rounded">
+            <span>{{directorOneCount}} films</span>
+            <span class="text-[#FF8000]">★ {{avgOne}}</span>
+          </div>
+        </div>
+        <div class="lb-card rounded-lg p-6 text-center border-t-4 border-t-[#00E054]">
+          <h3 class="font-bold text-xl mb-3 text-white truncate" title="{{directorTwo}}">{{directorTwo}}</h3>
+          <div class="flex justify-between text-sm text-[#8AA8CC] bg-[#14181C] p-2 rounded">
+            <span>{{directorTwoCount}} films</span>
+            <span class="text-[#00E054]">★ {{avgTwo}}</span>
+          </div>
+        </div>
+        <div class="lb-card rounded-lg p-6 text-center border-t-4 border-t-[#40BCF4]">
+          <h3 class="font-bold text-xl mb-3 text-white truncate" title="{{directorThree}}">{{directorThree}}</h3>
+          <div class="flex justify-between text-sm text-[#8AA8CC] bg-[#14181C] p-2 rounded">
+            <span>{{directorThreeCount}} films</span>
+            <span class="text-[#40BCF4]">★ {{avgThre}}</span>
+          </div>
+        </div>
+        <div class="lb-card rounded-lg p-6 text-center border-t-4 border-t-[#00E054]">
+          <h3 class="font-bold text-xl mb-3 text-white truncate" title="{{directorFour}}">{{directorFour}}</h3>
+          <div class="flex justify-between text-sm text-[#8AA8CC] bg-[#14181C] p-2 rounded">
+            <span>{{directorFourCount}} films</span>
+            <span class="text-[#00E054]">★ {{avgFour}}</span>
+          </div>
+        </div>
+        <div class="lb-card rounded-lg p-6 text-center border-t-4 border-t-[#FF8000]">
+          <h3 class="font-bold text-xl mb-3 text-white truncate" title="{{directorFive}}">{{directorFive}}</h3>
+          <div class="flex justify-between text-sm text-[#8AA8CC] bg-[#14181C] p-2 rounded">
+            <span>{{directorFiveCount}} films</span>
+            <span class="text-[#FF8000]">★ {{avgFive}}</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="bg-gray-700 border-gray-300 border-b">
-    <div class="font-extrabold text-5xl text-center mt-16 text-white">
-      Your Top 5 <span class="font-extrabold text-amber-500">Directors</span>:
-    </div>
-
-    <div class="grid grid-cols-7 gap text-center grid-rows-6 text-white font-bold">
-          <div class="bg-linear-to-r from-amber-500 to-yellow-600 row-start-6 row-end-1 col-start-2 col-end-3 border-4 border-yellow-400 shadow-2xl">{{directorOne}} <br> Movies Watched: {{directorOneCount}} <br> Avg Rating: {{avgOne}} </div>
-          <div class="bg-linear-to-r from-stone-700 to-zinc-500 row-start-6 row-end-2 col-start-3 col-end-4 border-4 border-gray-600 shadow-2xl">{{directorTwo}} <br> Movies Watched: {{directorTwoCount}} <br> Avg Rating: {{avgTwo}} </div>
-          <div class="bg-linear-to-t from-yellow-800 to-orange-700 row-start-6 row-end-3 col-start-4 col-end-5 border-4 border-yellow-700 shadow-2xl">{{directorThree}} <br> Movies Watched: {{directorThreeCount}} <br> Avg Rating: {{avgThre}} </div>
-          <div class="bg-linear-to-b from-yellow-500 to-orange-400 row-start-6 row-end-4 col-start-5 col-end-6 border-4 border-yellow-900 shadow-2xl">{{directorFour}}<br> Movies Watched: {{directorFourCount}} <br> Avg Rating: {{avgFour}} </div>
-          <div class="bg-linear-to-b from-green-800 to-emerald-700 row-start-5 row-end-5 col-start-6 col-end-7 border-4 border-green-600 shadow-2xl">{{directorFive}}<br> Movies Watched: {{directorFiveCount}} <br> Avg Rating: {{avgFive}} </div>
-    </div>
-  </div>
-
-  <div class="bg-gray-700 border-gray-300 border-b">
-    <div class="font-extrabold text-5xl text-center mt-16 text-white">
-      Your Top 3 <span class="font-extrabold text-amber-500">Decades</span>:
-    </div>
-
-    <div class="grid grid-cols-4 grid-rows-3 text-center gap-2 mb-12 mt-8 text-white font-bold">
-      <div class="bg-blue-700 col-start-2 col-end-3 border">{{decOne}}</div>
-      <div class="bg-blue-700 col-start-3 col-end-4 border">{{decOneCount}} movies from this decade</div>  
-      <div class="bg-blue-700 col-start-2 col-end-3 border">{{decTwo}}</div>  
-      <div class="bg-blue-700 col-start-3 col-end-4 border">{{decTwoCount}} movies from this decade</div>  
-      <div class="bg-blue-700 col-start-2 col-end-3 border">{{decThree}}</div>  
-      <div class="bg-blue-700 col-start-3 col-end-4 border">{{decThreeCount}} movies from this decade</div>           
-    </div>
-  </div>
-
-  <div class="bg-gray-700 border-gray-300 border-b">
-    <div class="font-extrabold text-5xl text-center mt-16 text-white mb-12">
-      Your Most Common <span class="font-extrabold text-amber-500">Ratings</span>:
-    </div>
-
-    <div class="grid grid-rows-5 text-center gap-2 grid-cols-8 mb-8 text-white font-bold">
-      <div class="bg-blue-800 row-start-1 row-end-2 col-start-2 col-end-7">{{rateOne}}/10</div> <div class="row-start-1 row-end-2 col-start-7 col-end-8">{{rateOneCount}} Times rated</div>
-      <div class="bg-blue-800 row-start-2 row-end-3 col-start-2 col-end-6">{{rateTwo}}/10</div> <div class="row-start-2 row-end-3 col-start-7 col-end-8">{{rateTwoCount}} Times rated</div>
-      <div class="bg-blue-800 row-start-3 row-end-4 col-start-2 col-end-5">{{rateThree}}/10</div> <div class="row-start-3 row-end-4 col-start-7 col-end-8">{{rateThreeCount}} Times rated</div>
-      <div class="bg-blue-800 row-start-4 row-end-5 col-start-2 col-end-4 ">{{rateFour}}/10</div> <div class="row-start-4 row-end-5 col-start-7 col-end-8">{{rateFourCount}} Times rated</div>
-      <div class="bg-blue-800 row-start-5 row-end-5 col-start-2 col-end-2">{{rateFive}}/10</div>  <div class="row-start-5 row-end-5 col-start-7 col-end-8">{{rateFiveCount}} Times rated</div>
-    </div>
-
-  </div>
-
-  <div class="bg-gray-700">
-    <div class="font-extrabold text-5xl text-center mt-16 text-white mb-12">
-      Your Most Common <span class="font-extrabold text-amber-500">Genres</span>:
-    </div>
-    <div class="grid grid-cols-5">
-      <div style="position: relative; height:50vh; width:50vw" class="col-start-3 col-end-3 mb-12">
-        <canvas id="myChart"></canvas>
+    <!-- Decades Section -->
+    <section>
+      <h2 class="text-2xl font-bold text-[#8AA8CC] uppercase tracking-widest mb-6 border-b border-[#445566] pb-2">Top 3 Decades</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="lb-card rounded-lg p-6 flex items-center justify-between">
+          <span class="text-4xl font-extrabold text-[#FF8000]">{{decOne}}</span>
+          <span class="text-[#8AA8CC] font-medium bg-[#14181C] px-4 py-2 rounded-full">{{decOneCount}} movies</span>
+        </div>
+        <div class="lb-card rounded-lg p-6 flex items-center justify-between">
+          <span class="text-4xl font-extrabold text-[#00E054]">{{decTwo}}</span>
+          <span class="text-[#8AA8CC] font-medium bg-[#14181C] px-4 py-2 rounded-full">{{decTwoCount}} movies</span>
+        </div>
+        <div class="lb-card rounded-lg p-6 flex items-center justify-between">
+          <span class="text-4xl font-extrabold text-[#40BCF4]">{{decThree}}</span>
+          <span class="text-[#8AA8CC] font-medium bg-[#14181C] px-4 py-2 rounded-full">{{decThreeCount}} movies</span>
+        </div>
       </div>
+    </section>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <!-- Ratings Section -->
+      <section>
+        <h2 class="text-2xl font-bold text-[#8AA8CC] uppercase tracking-widest mb-6 border-b border-[#445566] pb-2">Common Ratings</h2>
+        <div class="bg-[#2C3440] rounded-lg p-6 border border-[#445566] space-y-4">
+          <div class="flex justify-between items-center border-b border-[#445566] pb-3">
+            <span class="text-2xl font-bold text-white">{{rateOne}} <span class="text-[#00E054] text-lg">★</span></span>
+            <span class="text-[#8AA8CC]">{{rateOneCount}} ratings</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-[#445566] pb-3">
+            <span class="text-2xl font-bold text-white">{{rateTwo}} <span class="text-[#00E054] text-lg">★</span></span>
+            <span class="text-[#8AA8CC]">{{rateTwoCount}} ratings</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-[#445566] pb-3">
+            <span class="text-2xl font-bold text-white">{{rateThree}} <span class="text-[#00E054] text-lg">★</span></span>
+            <span class="text-[#8AA8CC]">{{rateThreeCount}} ratings</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-[#445566] pb-3">
+            <span class="text-2xl font-bold text-white">{{rateFour}} <span class="text-[#00E054] text-lg">★</span></span>
+            <span class="text-[#8AA8CC]">{{rateFourCount}} ratings</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-2xl font-bold text-white">{{rateFive}} <span class="text-[#00E054] text-lg">★</span></span>
+            <span class="text-[#8AA8CC]">{{rateFiveCount}} ratings</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Genres Section -->
+      <section>
+        <h2 class="text-2xl font-bold text-[#8AA8CC] uppercase tracking-widest mb-6 border-b border-[#445566] pb-2">Top Genres</h2>
+        <div class="bg-[#2C3440] rounded-lg p-6 border border-[#445566] flex justify-center items-center">
+          <div style="position: relative; height:300px; width:100%">
+            <canvas id="myChart"></canvas>
+          </div>
+        </div>
+      </section>
     </div>
+
   </div>
- 
-  
-</body>
 
 <script>
-  
   const ctx = document.getElementById('myChart');
   new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
-      labels: ['{{genreOne}} ({{genreOneCount}})', '{{genreTwo}} ({{genreTwoCount}})', '{{genreThree}} ({{genreThreeCount}})', '{{genreFour}} ({{genreFourCount}})', '{{genreFive}} ({{genreFiveCount}})', 'Other ({{remainderPer}})'],
+      labels: ['{{genreOne}}', '{{genreTwo}}', '{{genreThree}}', '{{genreFour}}', '{{genreFive}}', 'Other'],
       datasets: [{
-        label: '# of Films per Genre',
         data: ["{{genreOneCount}}", "{{genreTwoCount}}", "{{genreThreeCount}}", "{{genreFourCount}}", "{{genreFiveCount}}", "{{remainderPer}}"],
         backgroundColor: [
-          'rgb(161, 27, 27)',
-          'rgb(0, 0, 255)',
-          'rgb(0, 83, 14)',
-          'rgb(251, 247, 12)',
-          'rgb(43, 231, 175)',
-          'rgb(162, 32, 186)',
+          '#00E054', // LB Green
+          '#40BCF4', // LB Blue
+          '#FF8000', // LB Orange
+          '#8AA8CC', // LB Light Slate
+          '#445566', // LB Dark Border Slate
+          '#14181C', // LB Background
         ],
-        borderWidth: 1,
-        devicePixelRatio:2,
+        borderColor: '#2C3440',
+        borderWidth: 2,
+        hoverOffset: 4
       }]
     },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: '#8AA8CC',
+            font: { family: 'Inter', size: 14 }
+          }
+        }
+      }
+    }
   });
 </script>
 
+</body>
 </html>

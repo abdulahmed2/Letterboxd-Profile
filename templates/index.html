@@ -3,34 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Letterboxd Profile</title>
-    <link rel="stylesheet" href="input.css" />
+    <title>Letterboxd Profile Scraper</title>
     <link rel="icon" type="image/x-icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH45TgrphrMnMTlMx9wpG_Jj7JoBzrI9zAfg&s">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
 
-<body class=" bg-gray-700">
+<body class="bg-[#14181C] text-white min-h-screen flex flex-col items-center justify-center relative">
  
-  <div class=" flex items-center bg-gray-800 shadow-2xl">
-    <div class="px-4 mx-auto mt-16 mb-16 max-w-7xl sm:mt-24">
-      <div class="text-center">
-        <h1 class="text-4xl font-extrabold tracking-tight text-gray-200 sm:text-5xl md:text-6xl font-title">
-        <span class="block">Letter<span class="text-orange-400">b</span><span class="text-green-500">o</span><span class="text-blue-400">x</span>d Profile</span>
-        </h1>
-      </div>
+  <!-- MAIN CONTENT -->
+  <div id="main-content" class="w-full max-w-lg px-4 transition-opacity duration-500">
+    <div class="text-center mb-12">
+      <h1 class="text-5xl font-extrabold tracking-tight text-white mb-4">
+        Letter<span class="text-[#FF8000]">b</span><span class="text-[#00E054]">o</span><span class="text-[#40BCF4]">x</span>d
+      </h1>
+      <p class="text-[#8AA8CC] text-lg font-medium">Profile Analyzer</p>
+    </div>
+
+    <div class="bg-[#2C3440] rounded-xl shadow-2xl p-8 border border-[#445566]">
+      <form id="scrape-form" method="POST" class="space-y-6">
+        {% if error %}
+          <div class="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-md text-sm text-center">
+            {{error}}
+          </div>
+        {% endif %}
+        
+        <div>
+          <label class="block mb-2 text-sm font-semibold text-[#8AA8CC] uppercase tracking-wider">Letterboxd Username</label>
+          <input type="text" name="userInput" class="w-full bg-[#14181C] border border-[#445566] text-white text-lg rounded-md block p-3 focus:ring-2 focus:ring-[#00E054] focus:border-transparent outline-none transition-all" placeholder="e.g. abdulahmed2" required />
+        </div>
+        
+        <button type="submit" class="w-full text-[#14181C] bg-[#00E054] hover:bg-[#00c048] font-bold rounded-md text-lg px-5 py-3 text-center transition-colors shadow-[0_0_15px_rgba(0,224,84,0.3)]">
+          Analyze Profile
+        </button>
+      </form>
+    </div>
+
+    <!-- BUY ME A COFFEE BUTTON -->
+    <div class="mt-8 text-center">
+      <a href="https://buymeacoffee.com/abdulahmed" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#2C3440] border border-[#445566] text-[#8AA8CC] hover:text-white hover:border-[#FF8000] hover:shadow-[0_0_10px_rgba(255,128,0,0.2)] transition-all text-sm font-medium">
+        <span>☕</span> Buy me a coffee
+      </a>
+      <a href="https://letterboxd.com/Abdulahmed2/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center ml-2 gap-2 px-5 py-2.5 rounded-full bg-[#2C3440] border border-[#445566] text-[#8AA8CC] hover:text-white hover:border-[#FF8000] hover:shadow-[0_0_10px_rgba(255,128,0,0.2)] transition-all text-sm font-medium">
+        <span>🎬</span> My Letterboxd (#niche)
+      </a>
     </div>
   </div>
 
-  <form class="max-w-md mx-auto" method="POST">
-    {% if error %}<p class="mb-4 text-center text-red-400">{{error}}</p>{% endif %}
-    <div class="mb-5 pt-48">
-      <label class="block mb-2 text-lg font-medium text-blue-600 font-bold">Letterboxd Username</label>
-      <input type="text" name="userInput" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "placeholder="Username" required />
-    </div>
-    <input type="submit" class="shadow-2xl text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"></button>
-  </form>
+  <!-- LOADING OVERLAY (Hidden by Default) -->
+  <div id="loading-overlay" class="hidden absolute inset-0 bg-[#14181C] flex flex-col items-center justify-center z-50">
+    
+    <!-- Multi-colored Letterboxd Spinner (Colors Corrected) -->
+    <div class="w-16 h-16 border-4 border-[#2C3440] border-t-[#FF8000] border-r-[#00E054] border-b-[#40BCF4] rounded-full animate-spin mb-8"></div>
+    
+    <h2 id="loading-title" class="text-3xl font-extrabold text-white mb-6 animate-pulse transition-all duration-500">
+      Analyzing Profile...
+    </h2>
+    
+    <p id="loading-quote" class="text-[#8AA8CC] text-lg italic text-center px-6 max-w-md h-16 transition-opacity duration-500">
+      "Hold onto your butts."<br><span class="text-sm not-italic text-[#445566]">— Jurassic Park</span>
+    </p>
+  </div>
 
+  <!-- JAVASCRIPT FOR LOADING SCREEN -->
+  <script>
+    document.getElementById('scrape-form').addEventListener('submit', function(e) {
+      // 1. Show the loading overlay and hide the main content
+      document.getElementById('main-content').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('main-content').classList.add('hidden');
+        document.getElementById('loading-overlay').classList.remove('hidden');
+      }, 300);
 
+      // 2. Setup the rotating film quotes
+      const quotes = [
+        '"I\'ll be back."<br><span class="text-sm not-italic text-[#445566]">— The Terminator</span>',
+        '"May the Force be with you."<br><span class="text-sm not-italic text-[#445566]">— Star Wars</span>',
+        '"Just keep swimming."<br><span class="text-sm not-italic text-[#445566]">— Finding Nemo</span>',
+        '"Roads? Where we\'re going we don\'t need roads."<br><span class="text-sm not-italic text-[#445566]">— Back to the Future</span>',
+        '"I feel the need... the need for speed."<br><span class="text-sm not-italic text-[#445566]">— Top Gun</span>',
+        '"To infinity and beyond!"<br><span class="text-sm not-italic text-[#445566]">— Toy Story</span>',
+        '"I\'m going to make him an offer he can\'t refuse."<br><span class="text-sm not-italic text-[#445566]">— The Godfather</span>'
+      ];
+      
+      let quoteIndex = 0;
+      const quoteEl = document.getElementById('loading-quote');
+      
+      // Change quote every 3.5 seconds
+      setInterval(() => {
+        quoteEl.style.opacity = '0'; // Fade out
+        setTimeout(() => {
+          quoteIndex = (quoteIndex + 1) % quotes.length;
+          quoteEl.innerHTML = quotes[quoteIndex];
+          quoteEl.style.opacity = '1'; // Fade in
+        }, 500); 
+      }, 3500);
+
+      // 3. The Easter Egg: Change the title if it takes longer than 12 seconds
+      setTimeout(() => {
+        const titleEl = document.getElementById('loading-title');
+        titleEl.style.opacity = '0';
+        setTimeout(() => {
+          titleEl.innerText = "Man, you've watched a lot of films...";
+          titleEl.style.opacity = '1';
+        }, 500);
+      }, 12000);
+      
+    });
+  </script>
 </body>
 </html>

@@ -1,108 +1,35 @@
+import asyncio
 from bs4 import BeautifulSoup
-import re
-import json
 from collections import Counter
 from flask import Flask, render_template, request
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from curl_cffi.requests import Session  # 🔥 Replaces cloudscraper and requests
+from curl_cffi.requests import Session, AsyncSession
 import time
 
 app = Flask(__name__)
 
 # -----------------------------------------------------------
-# Multithreaded Film Scraper Function 
+# ASYNC NETWORK FETCHER
 # -----------------------------------------------------------
-def process_film(film, session):
-    dictMovie = {}
-    try:
-        # --- BASIC FILM DATA ---
-        nameFinder = film.find('div')
-        dictMovie["Name"] = nameFinder['data-item-name'] if nameFinder else "Unknown"
-
-        rating = film.find('span', class_='rating')
-        if rating:
-            listOfClass = rating['class']
-            rateNum = str(listOfClass[-1:])
-            if len(rateNum) == 12:
-                dictMovie["Rating"] = int(rateNum[-4:-2])
-            elif len(rateNum) == 11:
-                dictMovie["Rating"] = int(rateNum[-3:-2])
-            else:
-                dictMovie["Rating"] = 0
-        else:
-            dictMovie["Rating"] = 0
-
-        # --- FILM PAGE REQUEST ---
-        filmLinkDiv = film.find('div', class_='react-component')
-        if not filmLinkDiv:
-            return None
-            
-        url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
-        
-        # 🔥 RETRY LOGIC ADDED HERE
-        max_retries = 3
-        soup = None
-        
-        for attempt in range(max_retries):
-            try:
-                # Increased timeout to 30 seconds
-                resp = session.get(url, timeout=30)
+async def fetch_all_films(urls):
+    sem = asyncio.Semaphore(8) # Strict limit to prevent Cloudflare IP blocks
+    async with AsyncSession(impersonate="chrome120") as session:
+        async def fetch(url):
+            async with sem:
+                for attempt in range(3):
+                    try:
+                        resp = await session.get(url, timeout=15)
+                        # Back off if we hit a rate limit
+                        if resp.status_code == 429:
+                            await asyncio.sleep(2)
+                            continue
+                        return resp.text
+                    except Exception:
+                        await asyncio.sleep(1) # Wait 1 second on timeout/error before retry
+                return None
                 
-                # If we get a 429 (Too Many Requests), wait and try again
-                if resp.status_code == 429:
-                    time.sleep(2)
-                    continue
-                    
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                break # Successfully got the page, exit the retry loop
-                
-            except Exception as req_error:
-                if attempt == max_retries - 1:
-                    print(f"Failed {dictMovie['Name']} after {max_retries} attempts: {req_error}")
-                    return None
-                time.sleep(1) # Wait 1 second before retrying
-
-        if not soup:
-            return None # Failsafe if loop finishes without soup
-
-        # YEAR
-        metaData = soup.find('meta', property='og:title')
-        if metaData and metaData.get('content'):
-            releaseYear = metaData['content']
-            dictMovie["Year"] = releaseYear[-5:-1]
-        else:
-            dictMovie["Year"] = "0000"
-
-        # DIRECTOR
-        directorPara = soup.find('p', class_='credits')
-        if directorPara:
-            directorNamed = directorPara.text[13:-2]
-            if ',' in directorNamed:
-                indexOf = directorNamed.find(',')
-                dictMovie["Director"] = directorNamed[:indexOf]
-            else:
-                dictMovie["Director"] = directorNamed
-        else:
-            dictMovie["Director"] = "Unknown"
-
-        # GENRE
-        dictMovie["Genre"] = "Unknown"
-        scripts = soup.find_all('script')
-        for script in scripts:
-            if script.text and 'window.ramp.custom_tags' in script.text:
-                script_content = script.string
-                lines = script_content.splitlines()
-                for line in lines:
-                    if "'," in line:
-                        dictMovie["Genre"] = line.strip()[1:-2]
-                        break
-                        
-    except Exception as e:
-        print(f"Error processing {dictMovie.get('Name', 'a film')}: {e}")
-        return None
-
-    return dictMovie
+        tasks = [fetch(url) for url in urls]
+        return await asyncio.gather(*tasks)
 
 # -----------------------------------------------------------
 # SAFE ANALYTICS HELPER
@@ -122,32 +49,12 @@ def scrape():
         url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
         print(f"Scraping started for {username} at {datetime.now()}")
         
-        # 🔥 Create ONE curl_cffi session impersonating Chrome 110
-        session = Session(
-            impersonate="chrome120", 
-            headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Referer": "https://letterboxd.com/",
-                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                "Sec-Ch-Ua-Mobile": "?0",
-                "Sec-Ch-Ua-Platform": '"Windows"',
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "same-origin",
-                "Upgrade-Insecure-Requests": "1"
-            }
-        )
-        
+        # 1. SYNCHRONOUSLY GET PAGINATION LISTS
+        session = Session(impersonate="chrome120")
         response = session.get(url)
-        print(f"Main Page Status Code: {response.status_code}") # 200 = Success, 403 = Blocked
+        print(f"Main Page Status Code: {response.status_code}")
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Debug: Check if Cloudflare hit us with a CAPTCHA page
-        if soup.title and "Just a moment" in soup.title.string:
-            print("❌ Cloudflare blocked the request!")
-            
         num_of_pages = soup.find_all('li', class_="paginate-page")
         all_film_elements = []
 
@@ -158,15 +65,15 @@ def scrape():
                 page_url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
                 
                 response = session.get(page_url)
-                soup = BeautifulSoup(response.text, 'html.parser')
-                page_films = soup.find_all('li', class_='poster-container') # Check for both classes
+                page_soup = BeautifulSoup(response.text, 'html.parser')
+                
+                page_films = page_soup.find_all('li', class_='poster-container')
                 if not page_films:
-                    page_films = soup.find_all('li', class_='griditem')
+                    page_films = page_soup.find_all('li', class_='griditem')
                     
                 all_film_elements.extend(page_films)
                 time.sleep(0.5) 
         else:
-            # Single page fallback
             page_films = soup.find_all('li', class_='poster-container')
             if not page_films:
                 page_films = soup.find_all('li', class_='griditem')
@@ -174,25 +81,79 @@ def scrape():
 
         print(f"Total films found to process: {len(all_film_elements)}")
 
+        # 2. EXTRACT URLS AND BASIC DATA FOR ASYNC FETCHING
+        film_data_list = []
+        urls_to_fetch = []
+
+        for film in all_film_elements:
+            dictMovie = {}
+            nameFinder = film.find('div')
+            dictMovie["Name"] = nameFinder['data-item-name'] if nameFinder else "Unknown"
+            
+            rating = film.find('span', class_='rating')
+            if rating:
+                listOfClass = rating['class']
+                rateNum = str(listOfClass[-1:])
+                if len(rateNum) == 12:
+                    dictMovie["Rating"] = int(rateNum[-4:-2])
+                elif len(rateNum) == 11:
+                    dictMovie["Rating"] = int(rateNum[-3:-2])
+                else:
+                    dictMovie["Rating"] = 0
+            else:
+                dictMovie["Rating"] = 0
+                
+            filmLinkDiv = film.find('div', class_='react-component')
+            if filmLinkDiv:
+                film_url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
+                urls_to_fetch.append(film_url)
+                film_data_list.append(dictMovie)
+
+        # 3. ASYNCHRONOUSLY FETCH ALL FILM PAGES
+        print(f"Fetching {len(urls_to_fetch)} film pages concurrently...")
+        html_pages = asyncio.run(fetch_all_films(urls_to_fetch))
+
+        # 4. SYNCHRONOUSLY PARSE IN MEMORY
         filmList, directorList, ratingList, genreList, yearList, decadeList = [], [], [], [], [], []
 
-        # Process with threads (Max 8 to avoid rate limits)
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            futures = [executor.submit(process_film, film, session) for film in all_film_elements]
-
-            for future in as_completed(futures):
-                data = future.result()
-                if data is not None: 
-                    filmList.append(data)
-                    ratingList.append(data["Rating"])
-                    directorList.append(data["Director"])
-                    yearList.append(data["Year"])
-                    if data["Genre"] != "Unknown":
-                        genreList.append(data["Genre"])
+        for dictMovie, html in zip(film_data_list, html_pages):
+            if not html:
+                continue # Skip if the request timed out on all 3 retries
+                
+            film_soup = BeautifulSoup(html, 'html.parser')
+            
+            # YEAR
+            metaData = film_soup.find('meta', property='og:title')
+            dictMovie["Year"] = metaData['content'][-5:-1] if metaData and metaData.get('content') else "0000"
+            
+            # DIRECTOR
+            directorPara = film_soup.find('p', class_='credits')
+            if directorPara:
+                directorNamed = directorPara.text[13:-2]
+                dictMovie["Director"] = directorNamed[:directorNamed.find(',')] if ',' in directorNamed else directorNamed
+            else:
+                dictMovie["Director"] = "Unknown"
+                
+            # GENRE
+            dictMovie["Genre"] = "Unknown"
+            scripts = film_soup.find_all('script')
+            for script in scripts:
+                if script.text and 'window.ramp.custom_tags' in script.text:
+                    for line in script.string.splitlines():
+                        if "'," in line:
+                            dictMovie["Genre"] = line.strip()[1:-2]
+                            break
+                            
+            filmList.append(dictMovie)
+            ratingList.append(dictMovie["Rating"])
+            directorList.append(dictMovie["Director"])
+            yearList.append(dictMovie["Year"])
+            if dictMovie["Genre"] != "Unknown":
+                genreList.append(dictMovie["Genre"])
 
         print(f"Successfully processed {len(filmList)} films.")
 
-        # Analytics calculations
+        # 5. ANALYTICS CALCULATIONS
         def most_common(input_list, top_n):
             if not input_list: return []
             return Counter(input_list).most_common(top_n)
