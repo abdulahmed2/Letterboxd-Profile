@@ -1,78 +1,116 @@
-import requests  # type: ignore
-from bs4 import BeautifulSoup  # type: ignore
+from bs4 import BeautifulSoup
 import re
 import json
 from collections import Counter
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-import cloudscraper
+from curl_cffi.requests import Session  # 🔥 Replaces cloudscraper and requests
+import time
 
 app = Flask(__name__)
 
-
 # -----------------------------------------------------------
-# 🔥 Multithreaded Film Scraper Function (NEW)
+# Multithreaded Film Scraper Function 
 # -----------------------------------------------------------
-def process_film(film):
+def process_film(film, session):
     dictMovie = {}
+    try:
+        # --- BASIC FILM DATA ---
+        nameFinder = film.find('div')
+        dictMovie["Name"] = nameFinder['data-item-name'] if nameFinder else "Unknown"
 
-    # --- BASIC FILM DATA ---
-    nameFinder = film.find('div')
-    dictMovie["Name"] = nameFinder['data-item-name']
-
-    rating = film.find('span', class_='rating')
-    if rating:
-        listOfClass = rating['class']
-        rateNum = str(listOfClass[-1:])
-        if len(rateNum) == 12:
-            dictMovie["Rating"] = int(rateNum[-4:-2])
-        elif len(rateNum) == 11:
-            dictMovie["Rating"] = int(rateNum[-3:-2])
-    else:
-        dictMovie["Rating"] = 0
-
-    # --- FILM PAGE REQUEST ---
-    filmLinkDiv = film.find('div', class_='react-component')
-    url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0"
-    }
-
-    resp = requests.get(url, headers=headers)
-    soup = BeautifulSoup(resp.text, 'html.parser')
-
-    # YEAR
-    metaData = soup.find('meta', property='og:title')
-    releaseYear = metaData['content']
-    dictMovie["Year"] = releaseYear[-5:-1]
-
-    # DIRECTOR
-    directorPara = soup.find('p', class_='credits')
-    if directorPara:
-        directorNamed = directorPara.text[13:-2]
-        if ',' in directorNamed:
-            indexOf = directorNamed.find(',')
-            dictMovie["Director"] = directorNamed[:indexOf]
+        rating = film.find('span', class_='rating')
+        if rating:
+            listOfClass = rating['class']
+            rateNum = str(listOfClass[-1:])
+            if len(rateNum) == 12:
+                dictMovie["Rating"] = int(rateNum[-4:-2])
+            elif len(rateNum) == 11:
+                dictMovie["Rating"] = int(rateNum[-3:-2])
+            else:
+                dictMovie["Rating"] = 0
         else:
-            dictMovie["Director"] = directorNamed
-    else:
-        dictMovie["Director"] = "Unknown"
+            dictMovie["Rating"] = 0
 
-    # GENRE
-    dictMovie["Genre"] = "Unknown"
-    scripts = soup.find_all('script')
-    for script in scripts:
-        if 'window.ramp.custom_tags' in script.text:
-            script_content = script.string
-            lines = script_content.splitlines()
-            for line in lines:
-                if "'," in line:
-                    dictMovie["Genre"] = line.strip()[1:-2]
-                    break
+        # --- FILM PAGE REQUEST ---
+        filmLinkDiv = film.find('div', class_='react-component')
+        if not filmLinkDiv:
+            return None
+            
+        url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
+        
+        # 🔥 RETRY LOGIC ADDED HERE
+        max_retries = 3
+        soup = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Increased timeout to 30 seconds
+                resp = session.get(url, timeout=30)
+                
+                # If we get a 429 (Too Many Requests), wait and try again
+                if resp.status_code == 429:
+                    time.sleep(2)
+                    continue
+                    
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                break # Successfully got the page, exit the retry loop
+                
+            except Exception as req_error:
+                if attempt == max_retries - 1:
+                    print(f"Failed {dictMovie['Name']} after {max_retries} attempts: {req_error}")
+                    return None
+                time.sleep(1) # Wait 1 second before retrying
+
+        if not soup:
+            return None # Failsafe if loop finishes without soup
+
+        # YEAR
+        metaData = soup.find('meta', property='og:title')
+        if metaData and metaData.get('content'):
+            releaseYear = metaData['content']
+            dictMovie["Year"] = releaseYear[-5:-1]
+        else:
+            dictMovie["Year"] = "0000"
+
+        # DIRECTOR
+        directorPara = soup.find('p', class_='credits')
+        if directorPara:
+            directorNamed = directorPara.text[13:-2]
+            if ',' in directorNamed:
+                indexOf = directorNamed.find(',')
+                dictMovie["Director"] = directorNamed[:indexOf]
+            else:
+                dictMovie["Director"] = directorNamed
+        else:
+            dictMovie["Director"] = "Unknown"
+
+        # GENRE
+        dictMovie["Genre"] = "Unknown"
+        scripts = soup.find_all('script')
+        for script in scripts:
+            if script.text and 'window.ramp.custom_tags' in script.text:
+                script_content = script.string
+                lines = script_content.splitlines()
+                for line in lines:
+                    if "'," in line:
+                        dictMovie["Genre"] = line.strip()[1:-2]
+                        break
+                        
+    except Exception as e:
+        print(f"Error processing {dictMovie.get('Name', 'a film')}: {e}")
+        return None
 
     return dictMovie
 
+# -----------------------------------------------------------
+# SAFE ANALYTICS HELPER
+# -----------------------------------------------------------
+def get_safe_stat(stat_list, index, default_name="N/A", default_count=0):
+    if len(stat_list) > index:
+        return stat_list[index][0], stat_list[index][1]
+    return default_name, default_count
 
 # -----------------------------------------------------------
 # FLASK ROUTE
@@ -82,259 +120,172 @@ def scrape():
     if request.method == 'POST':
         username = request.form.get('userInput')
         url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
+        print(f"Scraping started for {username} at {datetime.now()}")
         
-        # Create a Cloudflare-bypassing scraper session
-        scraper = cloudscraper.create_scraper(browser={
-            'browser': 'chrome',
-            'platform': 'windows',
-            'desktop': True
-        })
+        # 🔥 Create ONE curl_cffi session impersonating Chrome 110
+        session = Session(
+            impersonate="chrome120", 
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": "https://letterboxd.com/",
+                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Upgrade-Insecure-Requests": "1"
+            }
+        )
         
-        response = scraper.get(url)
+        response = session.get(url)
+        print(f"Main Page Status Code: {response.status_code}") # 200 = Success, 403 = Blocked
+        
         soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Debug: Check if Cloudflare hit us with a CAPTCHA page
+        if soup.title and "Just a moment" in soup.title.string:
+            print("❌ Cloudflare blocked the request!")
+            
         num_of_pages = soup.find_all('li', class_="paginate-page")
+        all_film_elements = []
 
-        x = 1
-        totalCount = 0
-        directorList = []
-        ratingList = []
-        genreList = []
-        yearList = []
-        filmList = []
-        decadeList = []
-
-        # -----------------------------------------------------------
-        # MULTITHREADED PAGE SCRAPING
-        # -----------------------------------------------------------
         if num_of_pages:
-            for i in range(int(num_of_pages[-1].text)):
+            total_pages = int(num_of_pages[-1].text)
+            for x in range(1, total_pages + 1):
+                print(f"Fetching page {x} of {total_pages}")
                 page_url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
-
-                # Create a Cloudflare-bypassing scraper session
-                scraper = cloudscraper.create_scraper(browser={
-                    'browser': 'chrome',
-                    'platform': 'windows',
-                    'desktop': True
-                })
                 
-                response = scraper.get(page_url)
+                response = session.get(page_url)
                 soup = BeautifulSoup(response.text, 'html.parser')
-                films = soup.find_all('li', class_='griditem')
-
-
-                # ---- THREADPOOL HERE ----
-                with ThreadPoolExecutor(max_workers=12) as executor:
-                    futures = [executor.submit(process_film, film) for film in films]
-
-                    for future in as_completed(futures):
-                        data = future.result()
-                        filmList.append(data)
-                        ratingList.append(data["Rating"])
-                        directorList.append(data["Director"])
-                        yearList.append(data["Year"])
-                        genreList.append(data["Genre"])
-
-                x += 1
-
+                page_films = soup.find_all('li', class_='poster-container') # Check for both classes
+                if not page_films:
+                    page_films = soup.find_all('li', class_='griditem')
+                    
+                all_film_elements.extend(page_films)
+                time.sleep(0.5) 
         else:
             # Single page fallback
-            response = requests.get(url)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            films = soup.find_all('li', class_='griditem')
+            page_films = soup.find_all('li', class_='poster-container')
+            if not page_films:
+                page_films = soup.find_all('li', class_='griditem')
+            all_film_elements = page_films
 
-            with ThreadPoolExecutor(max_workers=20) as executor:
-                futures = [executor.submit(process_film, film) for film in films]
+        print(f"Total films found to process: {len(all_film_elements)}")
 
-                for future in as_completed(futures):
-                    data = future.result()
+        filmList, directorList, ratingList, genreList, yearList, decadeList = [], [], [], [], [], []
+
+        # Process with threads (Max 8 to avoid rate limits)
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [executor.submit(process_film, film, session) for film in all_film_elements]
+
+            for future in as_completed(futures):
+                data = future.result()
+                if data is not None: 
                     filmList.append(data)
                     ratingList.append(data["Rating"])
                     directorList.append(data["Director"])
                     yearList.append(data["Year"])
-                    genreList.append(data["Genre"])
+                    if data["Genre"] != "Unknown":
+                        genreList.append(data["Genre"])
 
-        # -----------------------------------------------------------
-        # ORIGINAL ANALYTICS LOGIC (unchanged)
-        # -----------------------------------------------------------
+        print(f"Successfully processed {len(filmList)} films.")
 
-        def top_5_most_common(input_list):
-            if not input_list:
-                return []
-            item_counts = Counter(input_list)
-            return item_counts.most_common(5)
+        # Analytics calculations
+        def most_common(input_list, top_n):
+            if not input_list: return []
+            return Counter(input_list).most_common(top_n)
 
-        def top_10_most_common(input_list):
-            if not input_list:
-                return []
-            item_counts = Counter(input_list)
-            return item_counts.most_common(10)
+        top_directors = most_common(directorList, 5)
+        top_ratings = most_common(ratingList, 5)
+        top_genres = most_common(genreList, 5)
 
-        def most_common_genre(input_list):
-            if not input_list:
-                return []
-            return Counter(input_list).most_common()
+        topDir1, topDir1Count = get_safe_stat(top_directors, 0)
+        topDir2, topDir2Count = get_safe_stat(top_directors, 1)
+        topDir3, topDir3Count = get_safe_stat(top_directors, 2)
+        topDir4, topDir4Count = get_safe_stat(top_directors, 3)
+        topDir5, topDir5Count = get_safe_stat(top_directors, 4)
 
-        def most_common_year(input_list):
-            if not input_list:
-                return []
-            return Counter(input_list).most_common()
-
-        def top_decade(input_list):
-            if not input_list:
-                return []
-            return Counter(input_list).most_common()
-
-        top_items = top_5_most_common(directorList)
-        commonRating = top_10_most_common(ratingList)
-        commonGenre = most_common_genre(genreList)
-
-        topDirector = top_items[0][0]
-        topDirectorCount = top_items[0][1]
-        stopDirector = top_items[1][0]
-        stopDirectorCount = top_items[1][1]
-        ttopDirector = top_items[2][0]
-        ttopDirectorCount = top_items[2][1]
-        ftopDirector = top_items[3][0]
-        ftopDirectorCount = top_items[3][1]
-        fitopDirector = top_items[4][0]
-        fitopDirectorCount = top_items[4][1]
-
-        totalRatingOne = totalRatingTwo = totalRatingThre = totalRatingFour = totalRatingFive = 0
-        ratedCountOne = ratedCountTwo = ratedCountThree = ratedCountFour = ratedCountFive = 0
-
+        dir_totals = {topDir1: [0,0], topDir2: [0,0], topDir3: [0,0], topDir4: [0,0], topDir5: [0,0]}
+        
         for film in filmList:
             rating = int(film["Rating"])
+            director = film["Director"]
+            if rating > 0 and director in dir_totals:
+                dir_totals[director][0] += rating
+                dir_totals[director][1] += 1
 
-            if film["Director"] == topDirector:
-                if rating > 0:
-                    totalRatingOne += rating
-                    ratedCountOne += 1
-            elif film["Director"] == stopDirector:
-                if rating > 0:
-                    totalRatingTwo += rating
-                    ratedCountTwo += 1
-            elif film["Director"] == ttopDirector:
-                if rating > 0:
-                    totalRatingThre += rating
-                    ratedCountThree += 1
-            elif film["Director"] == ftopDirector:
-                if rating > 0:
-                    totalRatingFour += rating
-                    ratedCountFour += 1
-            elif film["Director"] == fitopDirector:
-                if rating > 0:
-                    totalRatingFive += rating
-                    ratedCountFive += 1
+        def calc_avg(director):
+            return round(dir_totals[director][0] / dir_totals[director][1], 2) if dir_totals[director][1] > 0 else 0
 
-        for film in yearList:
-            year = int(film)
-            if 2020 <= year < 2030: decadeList.append("2020s")
-            if 2010 <= year < 2020: decadeList.append("2010s")
-            if 2000 <= year < 2010: decadeList.append("2000s")
-            if 1990 <= year < 2000: decadeList.append("1990s")
-            if 1980 <= year < 1990: decadeList.append("1980s")
-            if 1970 <= year < 1980: decadeList.append("1970s")
-            if 1960 <= year < 1970: decadeList.append("1960s")
-            if 1950 <= year < 1960: decadeList.append("1950s")
-            if 1940 <= year < 1950: decadeList.append("1940s")
-            if 1930 <= year < 1940: decadeList.append("1930s")
-            if 1920 <= year < 1930: decadeList.append("1920s")
-            if 1910 <= year < 1920: decadeList.append("1910s")
-            if 1900 <= year < 1910: decadeList.append("1900s")
-            if 1890 <= year < 1900: decadeList.append("1890s")
-            if 1880 <= year < 1890: decadeList.append("1880s")
-            if 1870 <= year < 1880: decadeList.append("1870s")
+        avgRatingOne = calc_avg(topDir1)
+        avgRatingTwo = calc_avg(topDir2)
+        avgRatingThre = calc_avg(topDir3)
+        avgRatingFour = calc_avg(topDir4)
+        avgRatingFive = calc_avg(topDir5)
 
-        topDecade = top_decade(decadeList)
+        for year in yearList:
+            try:
+                y = int(year)
+                decade = f"{(y // 10) * 10}s"
+                if 1870 <= y <= 2030:
+                    decadeList.append(decade)
+            except ValueError:
+                pass
 
-        avgRatingOne = round(totalRatingOne / ratedCountOne, 2) if ratedCountOne else 0
-        avgRatingTwo = round(totalRatingTwo / ratedCountTwo, 2) if ratedCountTwo else 0
-        avgRatingThre = round(totalRatingThre / ratedCountThree, 2) if ratedCountThree else 0
-        avgRatingFour = round(totalRatingFour / ratedCountFour, 2) if ratedCountFour else 0
-        avgRatingFive = round(totalRatingFive / ratedCountFive, 2) if ratedCountFive else 0
+        top_decades = most_common(decadeList, 3)
+        decOne, decOneCount = get_safe_stat(top_decades, 0)
+        decTwo, decTwoCount = get_safe_stat(top_decades, 1)
+        decThree, decThreeCount = get_safe_stat(top_decades, 2)
 
-        decadeOne = topDecade[0][0]
-        decadeOneCount = topDecade[0][1]
-        decadeTwo = topDecade[1][0]
-        decadeTwoCount = topDecade[1][1]
-        decadeThree = topDecade[2][0]
-        decadeThreeCount = topDecade[2][1]
+        rateOne, rateOneCount = get_safe_stat(top_ratings, 0)
+        rateTwo, rateTwoCount = get_safe_stat(top_ratings, 1)
+        rateThree, rateThreeCount = get_safe_stat(top_ratings, 2)
+        rateFour, rateFourCount = get_safe_stat(top_ratings, 3)
+        rateFive, rateFiveCount = get_safe_stat(top_ratings, 4)
 
-        ratingOne = commonRating[0][0]
-        ratingOneCount = commonRating[0][1]
-        ratingTwo = commonRating[1][0]
-        ratingTwoCount = commonRating[1][1]
-        ratingThree = commonRating[2][0]
-        ratingThreeCount = commonRating[2][1]
-        ratingFour = commonRating[3][0]
-        ratingFourCount = commonRating[3][1]
-        ratingFive = commonRating[4][0]
-        ratingFiveCount = commonRating[4][1]
+        genreOne, genreOneCount = get_safe_stat(top_genres, 0)
+        genreTwo, genreTwoCount = get_safe_stat(top_genres, 1)
+        genreThree, genreThreeCount = get_safe_stat(top_genres, 2)
+        genreFour, genreFourCount = get_safe_stat(top_genres, 3)
+        genreFive, genreFiveCount = get_safe_stat(top_genres, 4)
+        
+        genreOne = genreOne.capitalize() if isinstance(genreOne, str) else genreOne
+        genreTwo = genreTwo.capitalize() if isinstance(genreTwo, str) else genreTwo
+        genreThree = genreThree.capitalize() if isinstance(genreThree, str) else genreThree
+        genreFour = genreFour.capitalize() if isinstance(genreFour, str) else genreFour
+        genreFive = genreFive.capitalize() if isinstance(genreFive, str) else genreFive
 
-        genreOne = str(commonGenre[0][0]).capitalize()
-        genreOneCount = commonGenre[0][1]
-        genreTwo = str(commonGenre[1][0]).capitalize()
-        genreTwoCount = commonGenre[1][1]
-        genreThree = str(commonGenre[2][0]).capitalize()
-        genreThreeCount = commonGenre[2][1]
-        genreFour = str(commonGenre[3][0]).capitalize()
-        genreFourCount = commonGenre[3][1]
-        genreFive = str(commonGenre[4][0]).capitalize()
-        genreFiveCount = commonGenre[4][1]
-        remainderPer = len(filmList) - (
-            genreOneCount + genreTwoCount + genreThreeCount + genreFourCount + genreFiveCount
-        )
-        print("Results returned: " + str(datetime.now()))
+        remainderPer = len(filmList) - (genreOneCount + genreTwoCount + genreThreeCount + genreFourCount + genreFiveCount)
+        
         return render_template(
             'answer.html',
             user=username,
-            directorOne=topDirector,
-            directorOneCount=topDirectorCount,
-            directorTwo=stopDirector,
-            directorTwoCount=stopDirectorCount,
-            directorThree=ttopDirector,
-            directorThreeCount=ttopDirectorCount,
-            directorFour=ftopDirector,
-            directorFourCount=ftopDirectorCount,
-            directorFive=fitopDirector,
-            directorFiveCount=fitopDirectorCount,
-            avgOne=avgRatingOne,
-            avgTwo=avgRatingTwo,
-            avgThre=avgRatingThre,
-            avgFour=avgRatingFour,
-            avgFive=avgRatingFive,
-            decOne=decadeOne,
-            decOneCount=decadeOneCount,
-            decTwo=decadeTwo,
-            decTwoCount=decadeTwoCount,
-            decThree=decadeThree,
-            decThreeCount=decadeThreeCount,
-            rateOne=ratingOne,
-            rateOneCount=ratingOneCount,
-            rateTwo=ratingTwo,
-            rateTwoCount=ratingTwoCount,
-            rateThree=ratingThree,
-            rateThreeCount=ratingThreeCount,
-            rateFour=ratingFour,
-            rateFourCount=ratingFourCount,
-            rateFive=ratingFive,
-            rateFiveCount=ratingFiveCount,
-            genreOne=genreOne,
-            genreOneCount=genreOneCount,
-            genreTwo=genreTwo,
-            genreTwoCount=genreTwoCount,
-            genreThree=genreThree,
-            genreThreeCount=genreThreeCount,
-            genreFour=genreFour,
-            genreFourCount=genreFourCount,
-            genreFive=genreFive,
-            genreFiveCount=genreFiveCount,
+            directorOne=topDir1, directorOneCount=topDir1Count,
+            directorTwo=topDir2, directorTwoCount=topDir2Count,
+            directorThree=topDir3, directorThreeCount=topDir3Count,
+            directorFour=topDir4, directorFourCount=topDir4Count,
+            directorFive=topDir5, directorFiveCount=topDir5Count,
+            avgOne=avgRatingOne, avgTwo=avgRatingTwo, avgThre=avgRatingThre,
+            avgFour=avgRatingFour, avgFive=avgRatingFive,
+            decOne=decOne, decOneCount=decOneCount,
+            decTwo=decTwo, decTwoCount=decTwoCount,
+            decThree=decThree, decThreeCount=decThreeCount,
+            rateOne=rateOne, rateOneCount=rateOneCount,
+            rateTwo=rateTwo, rateTwoCount=rateTwoCount,
+            rateThree=rateThree, rateThreeCount=rateThreeCount,
+            rateFour=rateFour, rateFourCount=rateFourCount,
+            rateFive=rateFive, rateFiveCount=rateFiveCount,
+            genreOne=genreOne, genreOneCount=genreOneCount,
+            genreTwo=genreTwo, genreTwoCount=genreTwoCount,
+            genreThree=genreThree, genreThreeCount=genreThreeCount,
+            genreFour=genreFour, genreFourCount=genreFourCount,
+            genreFive=genreFive, genreFiveCount=genreFiveCount,
             remainderPer=remainderPer,
         )
 
-
     return render_template('index.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
