@@ -1,77 +1,43 @@
 import asyncio
-import aiohttp
-import urllib.parse
 from bs4 import BeautifulSoup
 from collections import Counter
 from flask import Flask, render_template, request
 from datetime import datetime
-from curl_cffi.requests import Session
+from curl_cffi.requests import Session, AsyncSession
 import time
 
 app = Flask(__name__)
 
-# 🔥 PUT YOUR TMDB API KEY HERE
-TMDB_API_KEY = "ea50b58379bc05923fa888be629f23f9"
+# 🔥 FIXED PROXY FORMATTING (Removed trailing slashes)
+PROXY_URL = "http://zlturfes:h96g8uefdgmz@31.59.20.176:6754"
+
+proxy_dict = {
+    "http": PROXY_URL,
+    "https": PROXY_URL
+}
 
 # -----------------------------------------------------------
-# TMDB API FETCHER (With Rate Limit Protection)
+# ASYNC NETWORK FETCHER
 # -----------------------------------------------------------
-async def fetch_tmdb_data(film_data_list):
-    # This semaphore acts as a traffic cop, allowing only 20 concurrent requests
-    # at a time so TMDB doesn't block us for spamming their API.
-    sem = asyncio.Semaphore(20) 
-    
-    async with aiohttp.ClientSession() as session:
-        async def fetch_movie(movie):
+async def fetch_all_films(urls):
+    sem = asyncio.Semaphore(8)
+    # Added verify=False to prevent proxy SSL certificate errors
+    async with AsyncSession(impersonate="chrome120", proxies=proxy_dict, verify=False) as session:
+        async def fetch(url):
             async with sem:
-                title = movie["Name"]
-                search_url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={urllib.parse.quote(title)}"
-                
-                for attempt in range(3): # Add a retry loop for safety
+                for attempt in range(3):
                     try:
-                        async with session.get(search_url) as resp:
-                            if resp.status == 401:
-                                print(f"🚨 TMDB API Key is invalid or missing!")
-                                return movie
-                            if resp.status == 429: # Too many requests, wait and retry
-                                await asyncio.sleep(1)
-                                continue
-                            if resp.status != 200: 
-                                return movie
-                                
-                            search_data = await resp.json()
-                            if not search_data.get('results'):
-                                return movie
-                                
-                            movie_id = search_data['results'][0]['id']
-                            
-                            details_url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&append_to_response=credits"
-                            async with session.get(details_url) as details_resp:
-                                if details_resp.status == 429:
-                                    await asyncio.sleep(1)
-                                    continue
-                                if details_resp.status != 200: 
-                                    return movie
-                                    
-                                details = await details_resp.json()
-                                
-                                if details.get('release_date'):
-                                    movie["Year"] = details['release_date'][:4]
-                                if details.get('genres'):
-                                    movie["Genre"] = details['genres'][0]['name']
-                                if details.get('credits') and details['credits'].get('crew'):
-                                    for crew_member in details['credits']['crew']:
-                                        if crew_member['job'] == 'Director':
-                                            movie["Director"] = crew_member['name']
-                                            break
-                                return movie # Successfully got data, exit retry loop
+                        resp = await session.get(url, timeout=20)
+                        if resp.status_code == 429:
+                            await asyncio.sleep(2)
+                            continue
+                        return resp.text
                     except Exception as e:
-                        print(f"Failed to fetch TMDB data for {title}: {e}")
-                        await asyncio.sleep(1)
+                        print(f"Async Fetch Error on {url}: {e}")
+                        await asyncio.sleep(1) 
+                return None
                 
-                return movie
-
-        tasks = [fetch_movie(movie) for movie in film_data_list]
+        tasks = [fetch(url) for url in urls]
         return await asyncio.gather(*tasks)
 
 # -----------------------------------------------------------
@@ -92,32 +58,54 @@ def scrape():
         url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
         print(f"Scraping started for {username} at {datetime.now()}")
         
-        session = Session(impersonate="safari15_5")
-        response = session.get(url)
+        # 1. SYNCHRONOUSLY GET PAGINATION LISTS
+        # Added verify=False here as well
+        session = Session(impersonate="safari15_5", proxies=proxy_dict, verify=False)      
+          
+        response = None
+        # Retry loop just for the main page in case the first proxy IP is dead
+        for attempt in range(3):
+            try:
+                print(f"Connecting to main page (Attempt {attempt + 1})...")
+                response = session.get(url, timeout=30)
+                print(f"Main Page Status Code: {response.status_code}")
+                break # Success! Break out of the retry loop.
+            except Exception as e:
+                print(f"PROXY OR CONNECTION ERROR: {e}")
+                time.sleep(2)
         
+        # If all 3 attempts failed, show the error
+        if not response:
+            return render_template('index.html', error="Failed to connect to proxy. Please check your terminal for the exact error.")
+        
+        # Check for 404 or active CF blocks
         if response.status_code == 404:
             return render_template('index.html', error="User not found. Check the username spelling!")
         if response.status_code == 403 or "Just a moment" in response.text:
-            return render_template('index.html', error="Letterboxd is currently blocking cloud servers. Please try again later.")
-            
+            return render_template('index.html', error="Letterboxd blocked the request. Try rotating your proxy.")
+
         soup = BeautifulSoup(response.text, 'html.parser')
         num_of_pages = soup.find_all('li', class_="paginate-page")
         all_film_elements = []
 
         if num_of_pages:
             total_pages = int(num_of_pages[-1].text)
-            # The page limit has been completely removed. It will scrape everything.
-            
             for x in range(1, total_pages + 1):
+                print(f"Fetching page {x} of {total_pages}")
                 page_url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
-                page_response = session.get(page_url)
-                page_soup = BeautifulSoup(page_response.text, 'html.parser')
                 
-                page_films = page_soup.find_all('li', class_='poster-container')
-                if not page_films:
-                    page_films = page_soup.find_all('li', class_='griditem')
+                try:
+                    page_response = session.get(page_url, timeout=20)
+                    page_soup = BeautifulSoup(page_response.text, 'html.parser')
                     
-                all_film_elements.extend(page_films)
+                    page_films = page_soup.find_all('li', class_='poster-container')
+                    if not page_films:
+                        page_films = page_soup.find_all('li', class_='griditem')
+                        
+                    all_film_elements.extend(page_films)
+                except Exception as e:
+                    print(f"Failed to fetch page {x}: {e}")
+                
                 time.sleep(0.5) 
         else:
             page_films = soup.find_all('li', class_='poster-container')
@@ -125,18 +113,16 @@ def scrape():
                 page_films = soup.find_all('li', class_='griditem')
             all_film_elements = page_films
 
-        # 2. EXTRACT BASIC DATA
+        print(f"Total films found to process: {len(all_film_elements)}")
+
+        # 2. EXTRACT URLS AND BASIC DATA FOR ASYNC FETCHING
         film_data_list = []
+        urls_to_fetch = []
+
         for film in all_film_elements:
-            dictMovie = {"Name": "Unknown", "Rating": 0, "Year": "0000", "Director": "Unknown", "Genre": "Unknown"}
-            
+            dictMovie = {}
             nameFinder = film.find('div')
-            if nameFinder and nameFinder.get('data-item-name'):
-                dictMovie["Name"] = nameFinder['data-item-name']
-            else:
-                imgFinder = film.find('img')
-                if imgFinder and imgFinder.get('alt'):
-                    dictMovie["Name"] = imgFinder['alt']
+            dictMovie["Name"] = nameFinder['data-item-name'] if nameFinder else "Unknown"
             
             rating = film.find('span', class_='rating')
             if rating:
@@ -146,27 +132,66 @@ def scrape():
                     dictMovie["Rating"] = int(rateNum[-4:-2])
                 elif len(rateNum) == 11:
                     dictMovie["Rating"] = int(rateNum[-3:-2])
-
-            if dictMovie["Name"] != "Unknown":
+                else:
+                    dictMovie["Rating"] = 0
+            else:
+                dictMovie["Rating"] = 0
+                
+            filmLinkDiv = film.find('div', class_='react-component')
+            if filmLinkDiv:
+                film_url = 'https://letterboxd.com' + str(filmLinkDiv.get('data-item-link'))
+                urls_to_fetch.append(film_url)
                 film_data_list.append(dictMovie)
 
-        print(f"Total films found to process via TMDB: {len(film_data_list)}")
+        # 3. ASYNCHRONOUSLY FETCH ALL FILM PAGES
+        print(f"Fetching {len(urls_to_fetch)} film pages concurrently...")
+        html_pages = asyncio.run(fetch_all_films(urls_to_fetch))
 
-        # 3. FETCH METADATA FROM TMDB (ASYNC)
-        if film_data_list:
-            filmList = asyncio.run(fetch_tmdb_data(film_data_list))
-        else:
-            filmList = []
+        # 4. SYNCHRONOUSLY PARSE IN MEMORY
+        filmList, directorList, ratingList, genreList, yearList, decadeList = [], [], [], [], [], []
 
-        # 4. ANALYTICS CALCULATIONS
-        directorList, ratingList, genreList, yearList, decadeList = [], [], [], [], []
-        
-        for film in filmList:
-            ratingList.append(film["Rating"])
-            if film["Director"] != "Unknown": directorList.append(film["Director"])
-            if film["Year"] != "0000": yearList.append(film["Year"])
-            if film["Genre"] != "Unknown": genreList.append(film["Genre"])
+        for dictMovie, html in zip(film_data_list, html_pages):
+            if not html:
+                continue 
+                
+            film_soup = BeautifulSoup(html, 'html.parser')
+            
+            # YEAR
+            metaData = film_soup.find('meta', property='og:title')
+            dictMovie["Year"] = metaData['content'][-5:-1] if metaData and metaData.get('content') else "0000"
+            
+            # DIRECTOR 
+            directorPara = film_soup.find('p', class_='credits')
+            if directorPara:
+                director_link = directorPara.find('a')
+                if director_link:
+                    dictMovie["Director"] = director_link.text.strip()
+                else:
+                    directorNamed = directorPara.text.replace('Directed by', '').strip()
+                    dictMovie["Director"] = directorNamed[:directorNamed.find(',')] if ',' in directorNamed else directorNamed
+            else:
+                dictMovie["Director"] = "Unknown"
+                
+            # GENRE
+            dictMovie["Genre"] = "Unknown"
+            scripts = film_soup.find_all('script')
+            for script in scripts:
+                if script.text and 'window.ramp.custom_tags' in script.text:
+                    for line in script.string.splitlines():
+                        if "'," in line:
+                            dictMovie["Genre"] = line.strip()[1:-2]
+                            break
+                            
+            filmList.append(dictMovie)
+            ratingList.append(dictMovie["Rating"])
+            directorList.append(dictMovie["Director"])
+            yearList.append(dictMovie["Year"])
+            if dictMovie["Genre"] != "Unknown":
+                genreList.append(dictMovie["Genre"])
 
+        print(f"Successfully processed {len(filmList)} films.")
+
+        # 5. ANALYTICS CALCULATIONS
         def most_common(input_list, top_n):
             if not input_list: return []
             return Counter(input_list).most_common(top_n)
