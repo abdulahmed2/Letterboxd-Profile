@@ -1,37 +1,44 @@
 import asyncio
+import aiohttp
+import urllib.parse
+import requests
 from bs4 import BeautifulSoup
 from collections import Counter
 from flask import Flask, render_template, request
 from datetime import datetime
-from curl_cffi.requests import Session, AsyncSession
 import time
 
 app = Flask(__name__)
 
-# 🔥 FIXED PROXY FORMATTING (Removed trailing slashes)
-PROXY_URL = "http://zlturfes:h96g8uefdgmz@31.59.20.176:6754"
+# 🔥 INSERT YOUR SCRAPERAPI KEY HERE
+SCRAPERAPI_KEY = "5c3a000132679fd4ec3fd579af668604"
 
-proxy_dict = {
-    "http": PROXY_URL,
-    "https": PROXY_URL
-}
+def get_scraperapi_url(target_url):
+    """Encodes the target URL and wraps it in the ScraperAPI endpoint."""
+    encoded_url = urllib.parse.quote(target_url)
+    return f"http://api.scraperapi.com?api_key={SCRAPERAPI_KEY}&url={encoded_url}"
 
 # -----------------------------------------------------------
-# ASYNC NETWORK FETCHER
+# ASYNC NETWORK FETCHER (Using ScraperAPI)
 # -----------------------------------------------------------
 async def fetch_all_films(urls):
-    sem = asyncio.Semaphore(8)
-    # Added verify=False to prevent proxy SSL certificate errors
-    async with AsyncSession(impersonate="chrome120", proxies=proxy_dict, verify=False) as session:
+    # Free tier limit is strictly 5 concurrent connections
+    sem = asyncio.Semaphore(5) 
+    
+    async with aiohttp.ClientSession() as session:
         async def fetch(url):
+            api_url = get_scraperapi_url(url)
             async with sem:
                 for attempt in range(3):
                     try:
-                        resp = await session.get(url, timeout=20)
-                        if resp.status_code == 429:
-                            await asyncio.sleep(2)
-                            continue
-                        return resp.text
+                        # 60 second timeout: ScraperAPI sometimes takes a while to bypass CF
+                        async with session.get(api_url, timeout=60) as resp:
+                            if resp.status == 200:
+                                return await resp.text()
+                            elif resp.status == 429: # Concurrency limit hit
+                                await asyncio.sleep(2)
+                            else:
+                                await asyncio.sleep(1)
                     except Exception as e:
                         print(f"Async Fetch Error on {url}: {e}")
                         await asyncio.sleep(1) 
@@ -55,34 +62,35 @@ def get_safe_stat(stat_list, index, default_name="N/A", default_count=0):
 def scrape():
     if request.method == 'POST':
         username = request.form.get('userInput')
-        url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
+        target_url = f'https://letterboxd.com/{username}/films/by/entry-rating/'
         print(f"Scraping started for {username} at {datetime.now()}")
         
         # 1. SYNCHRONOUSLY GET PAGINATION LISTS
-        # Added verify=False here as well
-        session = Session(impersonate="safari15_5", proxies=proxy_dict, verify=False)      
-          
+        api_url = get_scraperapi_url(target_url)
+        
         response = None
-        # Retry loop just for the main page in case the first proxy IP is dead
         for attempt in range(3):
             try:
-                print(f"Connecting to main page (Attempt {attempt + 1})...")
-                response = session.get(url, timeout=30)
+                print(f"Connecting to main page via ScraperAPI (Attempt {attempt + 1})...")
+                response = requests.get(api_url, timeout=60)
+                
+                if response.status_code == 429:
+                    print("Hit ScraperAPI concurrency limit. Waiting...")
+                    time.sleep(2)
+                    continue
+                    
                 print(f"Main Page Status Code: {response.status_code}")
-                break # Success! Break out of the retry loop.
+                break 
             except Exception as e:
-                print(f"PROXY OR CONNECTION ERROR: {e}")
+                print(f"CONNECTION ERROR: {e}")
                 time.sleep(2)
         
-        # If all 3 attempts failed, show the error
-        if not response:
-            return render_template('index.html', error="Failed to connect to proxy. Please check your terminal for the exact error.")
-        
-        # Check for 404 or active CF blocks
-        if response.status_code == 404:
-            return render_template('index.html', error="User not found. Check the username spelling!")
-        if response.status_code == 403 or "Just a moment" in response.text:
-            return render_template('index.html', error="Letterboxd blocked the request. Try rotating your proxy.")
+        if not response or response.status_code != 200:
+            if response and response.status_code == 401:
+                return render_template('index.html', error="Invalid ScraperAPI Key!")
+            if response and response.status_code == 404:
+                return render_template('index.html', error="User not found. Check the username spelling!")
+            return render_template('index.html', error="Failed to fetch profile via ScraperAPI.")
 
         soup = BeautifulSoup(response.text, 'html.parser')
         num_of_pages = soup.find_all('li', class_="paginate-page")
@@ -92,21 +100,28 @@ def scrape():
             total_pages = int(num_of_pages[-1].text)
             for x in range(1, total_pages + 1):
                 print(f"Fetching page {x} of {total_pages}")
-                page_url = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
+                page_target = f'https://letterboxd.com/{username}/films/by/entry-rating/page/{x}/'
+                page_api_url = get_scraperapi_url(page_target)
                 
-                try:
-                    page_response = session.get(page_url, timeout=20)
-                    page_soup = BeautifulSoup(page_response.text, 'html.parser')
-                    
-                    page_films = page_soup.find_all('li', class_='poster-container')
-                    if not page_films:
-                        page_films = page_soup.find_all('li', class_='griditem')
-                        
-                    all_film_elements.extend(page_films)
-                except Exception as e:
-                    print(f"Failed to fetch page {x}: {e}")
+                # Nested retry for pagination
+                for page_attempt in range(3):
+                    try:
+                        page_response = requests.get(page_api_url, timeout=60)
+                        if page_response.status_code == 429:
+                            time.sleep(2)
+                            continue
+                            
+                        page_soup = BeautifulSoup(page_response.text, 'html.parser')
+                        page_films = page_soup.find_all('li', class_='poster-container')
+                        if not page_films:
+                            page_films = page_soup.find_all('li', class_='griditem')
+                            
+                        all_film_elements.extend(page_films)
+                        break
+                    except Exception as e:
+                        print(f"Failed to fetch page {x}: {e}")
+                        time.sleep(1)
                 
-                time.sleep(0.5) 
         else:
             page_films = soup.find_all('li', class_='poster-container')
             if not page_films:
@@ -144,7 +159,7 @@ def scrape():
                 film_data_list.append(dictMovie)
 
         # 3. ASYNCHRONOUSLY FETCH ALL FILM PAGES
-        print(f"Fetching {len(urls_to_fetch)} film pages concurrently...")
+        print(f"Fetching {len(urls_to_fetch)} film pages concurrently via ScraperAPI...")
         html_pages = asyncio.run(fetch_all_films(urls_to_fetch))
 
         # 4. SYNCHRONOUSLY PARSE IN MEMORY
