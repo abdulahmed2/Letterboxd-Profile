@@ -50,7 +50,7 @@ def scrape():
         print(f"Scraping started for {username} at {datetime.now()}")
         
         # 1. SYNCHRONOUSLY GET PAGINATION LISTS
-        session = Session(impersonate="chrome120")
+        session = Session(impersonate="safari15_5")
         response = session.get(url)
         print(f"Main Page Status Code: {response.status_code}")
         
