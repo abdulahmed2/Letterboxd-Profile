@@ -59,31 +59,10 @@ def scrape():
         print(f"Scraping started for {username} at {datetime.now()}")
         
         # 1. SYNCHRONOUSLY GET PAGINATION LISTS
-        # Added verify=False here as well
-        session = Session(impersonate="safari15_5", proxies=proxy_dict, verify=False)      
-          
-        response = None
-        # Retry loop just for the main page in case the first proxy IP is dead
-        for attempt in range(3):
-            try:
-                print(f"Connecting to main page (Attempt {attempt + 1})...")
-                response = session.get(url, timeout=30)
-                print(f"Main Page Status Code: {response.status_code}")
-                break # Success! Break out of the retry loop.
-            except Exception as e:
-                print(f"PROXY OR CONNECTION ERROR: {e}")
-                time.sleep(2)
+        session = Session(impersonate="safari15_5")
+        response = session.get(url)
+        print(f"Main Page Status Code: {response.status_code}")
         
-        # If all 3 attempts failed, show the error
-        if not response:
-            return render_template('index.html', error="Failed to connect to proxy. Please check your terminal for the exact error.")
-        
-        # Check for 404 or active CF blocks
-        if response.status_code == 404:
-            return render_template('index.html', error="User not found. Check the username spelling!")
-        if response.status_code == 403 or "Just a moment" in response.text:
-            return render_template('index.html', error="Letterboxd blocked the request. Try rotating your proxy.")
-
         soup = BeautifulSoup(response.text, 'html.parser')
         num_of_pages = soup.find_all('li', class_="paginate-page")
         all_film_elements = []
